@@ -12,7 +12,7 @@ export default function AppBar({ children, account, actionsRef, showBack = false
   const goBack = useBackNavigation();
   return <MuiAppBar position="static" elevation={0} color="transparent" sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
     <Toolbar sx={{ gap: 2, py: 2, flexWrap: 'wrap', justifyContent: 'space-between', maxWidth: 1248, width: '100%', mx: 'auto' }}>
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{display: { xs: 'none', sm: 'flex' }}}>
         {showBack
           ? <IconButton color="primary" aria-label={t('back')} onClick={goBack}>
             <ArrowBack sx={{ fontSize: 32 }} />

@@ -38,8 +38,6 @@ export default function MeasurementCard({ measurement, home, now }: MeasurementC
       {t('measured', { time: formatTime(measurement.measuredAt, home.timezone, i18n.language, true) })}
     </Typography>}
     
-    {status === 'stale' && <Typography variant="caption" color="warning.main" sx={{ display: 'block', fontWeight: 600 }}>{t('stale')}</Typography>}
-    
     {measurement.updateFailed && <Typography variant="caption" color="warning.main" sx={{ display: 'block' }}>{t('updateFailed')}</Typography>}
   </>;
 
@@ -52,6 +50,13 @@ export default function MeasurementCard({ measurement, home, now }: MeasurementC
   };
   
   return measurement.hasHistory
-    ? <Paper elevation={0} component={Link} aria-label={`${t(measurement.kind)} · ${measurement.deviceName}`} to={createHistoryRoute(home.id, measurement.id)} sx={sx}>{content}</Paper>
-    : <Paper elevation={0} sx={sx}>{content}</Paper>;
+    ? <Paper elevation={0} 
+             component={Link} 
+             aria-label={`${t(measurement.kind)} · ${measurement.deviceName}`} 
+             to={createHistoryRoute(home.id, measurement.id)} sx={sx}>
+        {content}
+      </Paper>
+    : <Paper elevation={0} sx={sx}>
+        {content}
+      </Paper>;
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, ListItemIcon, ListItemText, Menu, MenuItem, Typography } from '@mui/material';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import PersonOutline from '@mui/icons-material/PersonOutline';
 import Logout from '@mui/icons-material/Logout';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import { Link } from 'react-router-dom';
@@ -14,10 +15,17 @@ export default function AccountMenu({ name, loggingOut, logout }: AccountMenuPro
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const open = anchor !== null;
   return <>
-    <Button id="account-menu-button" aria-haspopup="menu" aria-expanded={open}
+    <Button id="account-menu-button" title={name} aria-label={name} aria-haspopup="menu" aria-expanded={open}
       aria-controls={open ? 'account-menu' : undefined} endIcon={<ExpandMore />}
-      onClick={event => setAnchor(event.currentTarget)} sx={{ maxWidth: '100%', minWidth: 0 }}>
-      <Typography component="span" noWrap>{name}</Typography>
+      onClick={event => setAnchor(event.currentTarget)} sx={theme => ({
+        maxWidth: '100%', minWidth: 0,
+        [theme.breakpoints.down('sm')]: {
+          width: 44, height: 44, p: 1,
+          '& .MuiButton-endIcon': { display: 'none' },
+        },
+      })}>
+      <PersonOutline sx={{ display: { xs: 'inline-flex', sm: 'none' } }} />
+      <Typography component="span" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>{name}</Typography>
     </Button>
     <Menu id="account-menu" anchorEl={anchor} open={open} onClose={() => setAnchor(null)}
       slotProps={{ list: { 'aria-labelledby': 'account-menu-button' } }}>

@@ -45,12 +45,26 @@ export default function Dashboard({ home, refreshHomes }: DashboardProps) {
       {snapshot.rooms.length === 0 && <Alert severity="info">{t('noMeasurements')}</Alert>}
 
       {rooms.map(room => <Box key={room.id} component="section" aria-label={room.name}>
-        <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>{room.name}</Typography>
+        <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+          {room.name}
+        </Typography>
 
         <Box data-testid="measurement-grid" sx={{
-          display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }, gap: { xs: 1, sm: 2 },
+          display: 'grid', 
+          gridTemplateColumns: { 
+            xs: 'repeat(2, minmax(0, 1fr))', 
+            md: 'repeat(3, minmax(0, 1fr))', 
+            lg: 'repeat(4, minmax(0, 1fr))'
+          }, 
+          gap: { 
+            xs: 1, 
+            sm: 2 
+          },
         }}>
-          {room.measurements.map(measurement => <MeasurementCard key={measurement.id} measurement={measurement} home={home} now={now} />)}
+          {room.measurements.map(measurement => <MeasurementCard key={measurement.id} 
+                                                                 measurement={measurement} 
+                                                                 home={home} 
+                                                                 now={now} />)}
         </Box>
         
       </Box>)}

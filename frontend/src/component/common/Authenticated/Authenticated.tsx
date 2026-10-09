@@ -36,23 +36,33 @@ export default function Authenticated({ session }: AuthenticatedProps) {
     <AppBar actionsRef={setActionsTarget} showBack={historyRoute !== null || settingsRoute !== null}
       account={<AccountMenu name={session.demo ? t('demoAccount') : query.data?.accountName || t('account')}
         loggingOut={logoutState.isLoading} logout={async () => {
-          try { await logout(session.csrfToken).unwrap(); dispatch(api.util.resetApiState()); }
-          catch (error) { console.error('Sign-out failed.', error); }
+          try { 
+            await logout(session.csrfToken).unwrap(); 
+            dispatch(api.util.resetApiState()); 
+          }
+          catch (error) { 
+            console.error('Sign-out failed.', error); 
+          }
         }} />}>
-          
+
       {home && <FormControl size="small" sx={{ minWidth: 220 }}>
         <InputLabel id="home-label">{t('home')}</InputLabel>
 
         <Select labelId="home-label" label={t('home')} value={home.id} onChange={event => {
           dispatch(preferences.actions.setHome(event.target.value));
-          if (!settingsRoute) navigate(DASHBOARD_ROUTE);
+
+          if (!settingsRoute) {
+            navigate(DASHBOARD_ROUTE);
+          }
         }}>
-          {homes.map(item => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}
+          {homes.map(item => <MenuItem key={item.id} value={item.id}>
+              {item.name}
+            </MenuItem>)}
         </Select>
       </FormControl>}
     </AppBar>
 
-    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2 } }}>
       {logoutState.isError && <Alert severity="error">{t('error')}</Alert>}
 
       {session.demo && <Alert severity="info" sx={{ mb: 3 }}>{t('demoNotice')}</Alert>}

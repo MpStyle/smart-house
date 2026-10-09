@@ -66,6 +66,5 @@
   "maxWindAngle": "Dirección del viento máximo",
   "historyMissing": "Esta medición no tiene un historial compatible.",
   "notFound": "Esta medición ya no está disponible.",
-  "stale": "Dato antiguo",
   "updateFailed": "Actualización fallida"
 }

@@ -66,6 +66,5 @@
   "maxWindAngle": "Richtung des stärksten Winds",
   "historyMissing": "Für diesen Messwert ist kein Verlauf verfügbar.",
   "notFound": "Dieser Messwert ist nicht mehr verfügbar.",
-  "stale": "Veralteter Messwert",
   "updateFailed": "Aktualisierung fehlgeschlagen"
 }

@@ -66,6 +66,5 @@
   "maxWindAngle": "Maximum wind direction",
   "historyMissing": "This measurement has no supported history.",
   "notFound": "This measurement is no longer available.",
-  "stale": "Stale data",
   "updateFailed": "Update failed"
 }

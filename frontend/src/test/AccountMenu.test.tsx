@@ -7,6 +7,18 @@ import { SETTINGS_ROUTE } from '../book/routes';
 afterEach(cleanup);
 
 describe('account menu', () => {
+  it('preserves the full account identity in the title and accessible name for the compact button', () => {
+    const name = 'person.with.a.long.name@example.test';
+    render(<MemoryRouter><AccountMenu name={name} loggingOut={false} logout={vi.fn()} /></MemoryRouter>);
+    const account = screen.getByRole('button', { name });
+    expect(account).toHaveAttribute('title', name);
+    expect(account).toHaveAttribute('aria-label', name);
+    expect(account).toContainElement(screen.getByTestId('PersonOutlineIcon'));
+    expect(screen.getByTestId('PersonOutlineIcon')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(account);
+    expect(screen.getByRole('menu', { name })).toBeInTheDocument();
+  });
+
   it('opens settings and sign-out only after clicking the account identity', async () => {
     render(<MemoryRouter>
       <AccountMenu name="Person" loggingOut={false} logout={vi.fn()} />
