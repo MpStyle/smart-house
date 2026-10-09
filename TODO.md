@@ -8,6 +8,10 @@
 - Spostare i file di logica nella cartella "book"
 - Spostare i file relativi alle API nella cartella "api"
 - Stampare request e response in console.log solo quando il front-end è avviato in dev.
+- Tutte le props dei componenti grafici devono avere un proprio tipo definito all'interno del file stesso del componente.
+- le MeasurementCard devono essere 2 per riga negli schermi degli smartphone
+- negli schermi degli smartphone nascondi le informazioni della stanza e la data di campionamento della misura nel componente MeasurementCard
+- nella pagina di Dashboard il pulsante di refresh deve essere nell' app bar, quindi l'app-bar deve contenere azioni specifiche per le singole pagine
 
 ## Back-end
 - Separare i model nei propri file: crea una cartella "Entities" e creare i relaviti file per ogni models
