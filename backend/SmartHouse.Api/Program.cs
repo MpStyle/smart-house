@@ -4,10 +4,13 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
-using SmartHouse.Api;
+using SmartHouse.Api.BusinessModels;
+using SmartHouse.Api.Controllers;
+using SmartHouse.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true);
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true)
+    .AddEnvironmentVariables().AddCommandLine(args);
 var config = builder.Configuration;
 var origin = new Uri(config["PublicOrigin"] ?? throw new InvalidOperationException("PublicOrigin is required."));
 if (!builder.Environment.IsDevelopment() && origin.Scheme != "https")
@@ -25,6 +28,7 @@ else if (builder.Environment.IsDevelopment())
 else throw new InvalidOperationException("Production requires Azure Blob and Key Vault data protection configuration.");
 
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<SessionRepository>();
 builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddHostedService<SessionCleanup>();
 builder.Services.AddHttpClient<INetatmoClient, NetatmoClient>(http => http.Timeout = TimeSpan.FromSeconds(25));
@@ -63,8 +67,6 @@ auth.AddCookie(options =>
         }
     };
 });
-static bool CredentialConfigured(string? value) =>
-    !string.IsNullOrWhiteSpace(value) && !value.StartsWith("@Microsoft.KeyVault(", StringComparison.OrdinalIgnoreCase);
 var authAvailable = CredentialConfigured(config["Netatmo:ClientId"]) && 
                     CredentialConfigured(config["Netatmo:ClientSecret"])
                     ;
@@ -100,7 +102,7 @@ if (authAvailable)
         };
         options.Events.OnRemoteFailure = context =>
         {
-            context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>().LogWarning("Netatmo authorization failed.");
+            context.HttpContext.RequestServices.GetRequiredService<ILogger<SmartHouse.Api.Program>>().LogWarning("Netatmo authorization failed.");
             context.HandleResponse();
             context.Response.Redirect(origin.GetLeftPart(UriPartial.Authority) + "/?authError=1");
             return Task.CompletedTask;
@@ -154,71 +156,22 @@ if (!app.Environment.IsDevelopment())
     });
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
-app.MapGet("/api/auth/session", (HttpContext context, IAntiforgery antiforgery, SessionStore store) =>
-{
-    var session = context.User.FindFirstValue(ClaimTypes.NameIdentifier) is { } id ? store.Find(id) : null;
-    return Results.Ok(new
-    {
-        authenticated = session is not null,
-        csrfToken = antiforgery.GetAndStoreTokens(context).RequestToken,
-        authAvailable,
-        demoAvailable = demo,
-        demo = session?.Demo == true,
-        expiresAt = session?.ExpiresAt
-    });
-});
-app.MapGet("/api/auth/login", (HttpContext context) =>
-{
-    if (!authAvailable) return Results.Json(new { code = "auth_not_configured" }, statusCode: 503);
-    var authority = origin.GetLeftPart(UriPartial.Authority);
-    if (context.Request.Scheme != origin.Scheme || context.Request.Host != HostString.FromUriComponent(origin))
-        return Results.Redirect(authority + "/api/auth/login");
-    return Results.Challenge(new AuthenticationProperties { RedirectUri = authority + "/" }, ["Netatmo"]);
-});
-app.MapPost("/api/auth/logout", async (HttpContext context, IAntiforgery antiforgery, SessionStore store) =>
-{
-    await antiforgery.ValidateRequestAsync(context);
-    if (context.User.FindFirstValue(ClaimTypes.NameIdentifier) is { } id) store.Delete(id);
-    await context.SignOutAsync();
-    return Results.NoContent();
-});
-if (demo)
-    app.MapPost("/api/auth/demo", async (HttpContext context, IAntiforgery antiforgery, SessionStore store) =>
-    {
-        await antiforgery.ValidateRequestAsync(context);
-        var id = store.Create(new("", "", DateTimeOffset.MaxValue), demo: true);
-        await context.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, id)], "demo")),
-            new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7) });
-        return Results.NoContent();
-    });
+app.MapHealth();
+app.MapSession(authAvailable, demo);
+app.MapLogin(authAvailable, origin);
+app.MapLogout();
+if (demo) app.MapDemo();
 var api = app.MapGroup("/api/homes").RequireAuthorization();
-api.MapGet("/", async (HttpContext context, DashboardService service, CancellationToken ct) =>
-{
-    var discovery = await service.Discover(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!, ct);
-    return Results.Ok(new { homes = discovery.Homes.Select(home => new { home.Id, home.Name, home.Timezone }), discovery.Warnings });
-});
-api.MapGet("/{homeId}/measurements", async (string homeId, HttpContext context, DashboardService service, CancellationToken ct) =>
-{
-    var snapshot = await service.Snapshot(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!, homeId, ct);
-    return Results.Ok(new
-    {
-        snapshot.HomeId, snapshot.Timezone, snapshot.FetchedAt, snapshot.Warnings,
-        rooms = snapshot.Rooms.Select(room => new
-        {
-            room.Id, room.Name,
-            measurements = room.Measurements.Select(measurement => new
-            {
-                measurement.Id, measurement.Kind, measurement.DeviceName, measurement.Value,
-                measurement.Unit, measurement.MeasuredAt, measurement.HasHistory,
-                sampleMinutes = measurement.Source?.Endpoint == "getroommeasure" ? (int?)30 : null
-            })
-        })
-    });
-});
-api.MapGet("/{homeId}/history/{measurementId}", async (string homeId, string measurementId, int? hours,
-    HttpContext context, DashboardService service, CancellationToken ct) =>
-    Results.Ok(await service.History(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!, homeId, measurementId, hours ?? 6, ct)));
+api.MapHomes();
+api.MapMeasurements();
+api.MapHistory();
 app.Run();
+return;
 
-public partial class Program;
+static bool CredentialConfigured(string? value) =>
+    !string.IsNullOrWhiteSpace(value) && !value.StartsWith("@Microsoft.KeyVault(", StringComparison.OrdinalIgnoreCase);
+
+namespace SmartHouse.Api
+{
+    public partial class Program;
+}

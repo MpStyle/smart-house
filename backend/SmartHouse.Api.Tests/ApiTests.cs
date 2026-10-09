@@ -7,13 +7,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SmartHouse.Api;
+using SmartHouse.Api.BusinessModels;
+using SmartHouse.Api.Entities;
 using Xunit;
 
 namespace SmartHouse.Api.Tests;
 
 public sealed class TestClock : TimeProvider
 {
-    public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset Now { get; set; } = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
     public override DateTimeOffset GetUtcNow() => Now;
 }
 
@@ -22,11 +24,46 @@ public sealed class CountingProvider(TestClock clock) : INetatmoClient
     public List<(string Endpoint, Dictionary<string, string?>? Query)> Calls { get; } = [];
     public bool Fail { get; set; }
     public bool SeparateStation { get; set; }
+    public HashSet<string> FailedEndpoints { get; } = [];
+    public int FailureStatus { get; set; } = 502;
+    public string FailureCode { get; set; } = "provider_unavailable";
+    public TimeSpan? ThermostatAge { get; set; }
+    public bool Unreachable { get; set; }
+    public bool MissingTemperature { get; set; }
+    public bool InvalidHistory { get; set; }
+    public bool MissingOptionalMetrics { get; set; }
+    public TimeSpan? WeatherAge { get; set; }
+    public bool Imperial { get; set; }
     public Task<JsonElement> Get(string sid, string endpoint, Dictionary<string, string?>? query, CancellationToken ct)
     {
         Calls.Add((endpoint, query));
-        if (Fail) throw new ProviderException("provider_unavailable");
+        if (Fail || FailedEndpoints.Contains(endpoint)) throw new ProviderException(FailureCode, FailureStatus);
         var result = DemoData.Get(endpoint, query, clock.Now);
+        if (endpoint == "getroommeasure" && ThermostatAge is { } age)
+            result = JsonSerializer.SerializeToElement(new Dictionary<string, double?[]>
+            {
+                [clock.Now.Subtract(age).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture)] = [22.3]
+            });
+        if (endpoint == "getroommeasure" && InvalidHistory)
+            result = JsonSerializer.SerializeToElement(new { unexpected = true });
+        if (endpoint == "homestatus" && Unreachable)
+        {
+            var json = System.Text.Json.Nodes.JsonNode.Parse(result.GetRawText())!;
+            json["home"]!["rooms"]![0]!["reachable"] = false;
+            result = JsonSerializer.SerializeToElement(json);
+        }
+        if (endpoint == "getstationsdata" && (Unreachable || MissingTemperature || MissingOptionalMetrics
+            || WeatherAge is not null || Imperial))
+        {
+            var json = System.Text.Json.Nodes.JsonNode.Parse(result.GetRawText())!;
+            if (Unreachable) json["devices"]![0]!["reachable"] = false;
+            if (MissingTemperature) json["devices"]![0]!["dashboard_data"]!.AsObject().Remove("Temperature");
+            if (MissingOptionalMetrics) json["devices"]![0]!["dashboard_data"]!.AsObject().Remove("AbsolutePressure");
+            if (WeatherAge is { } weatherAge)
+                json["devices"]![0]!["dashboard_data"]!["time_utc"] = clock.Now.Subtract(weatherAge).ToUnixTimeSeconds();
+            if (Imperial) json["user"]!["administrative"]!["unit"] = 1;
+            result = JsonSerializer.SerializeToElement(json);
+        }
         if (SeparateStation && endpoint == "getstationsdata")
         {
             var json = System.Text.Json.Nodes.JsonNode.Parse(result.GetRawText())!;
@@ -92,7 +129,7 @@ public class ApiTests
     }
 
     [Fact]
-    public async Task GroupsRoomsPreservesDeviceValuesAndExpiresOldReadings()
+    public async Task GroupsRoomsPreservesDeviceValuesAndMarksOldReadingsAsStale()
     {
         using var app = new ApiFactory();
         using var client = app.CreateClient();
@@ -106,9 +143,171 @@ public class ApiTests
         Assert.Equal(21.7, living.Single(value => value.Text("id") == "station:Temperature").Number("value"));
         Assert.All(living, value => Assert.NotEqual(JsonValueKind.Null, value.Field("value").ValueKind));
         Assert.All(rooms.Single(room => room.Text("name") == "Camera").Field("measurements").Items(),
-            value => Assert.Equal(JsonValueKind.Null, value.Field("value").ValueKind));
+            value => { Assert.NotEqual(JsonValueKind.Null, value.Field("value").ValueKind); Assert.Equal("stale", value.Text("status")); });
         Assert.DoesNotContain(living, value => value.Field("source").ValueKind != JsonValueKind.Undefined);
         Assert.DoesNotContain(living, value => value.Text("kind") == "battery");
+    }
+
+    [Theory]
+    [InlineData(3, "stale")]
+    [InlineData(48, "stale")]
+    [InlineData(49, "unavailable")]
+    [InlineData(-1, "unavailable")]
+    public async Task ThermostatLastSampleIsAvailableBeforeOpeningTheChart(int ageHours, string expected)
+    {
+        using var app = new ApiFactory();
+        app.Provider.ThermostatAge = TimeSpan.FromHours(ageHours);
+        using var client = app.CreateClient();
+        await Login(client);
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        var thermostat = snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items())
+            .Single(value => value.Text("id") == "thermostat:Temperature");
+        Assert.Equal(expected, thermostat.Text("status"));
+        Assert.Equal(expected == "unavailable" ? null : 22.3, thermostat.Number("value"));
+        var call = Assert.Single(app.Provider.Calls, call => call.Endpoint == "getroommeasure");
+        Assert.Equal(48 * 3600, long.Parse(call.Query!["date_end"]!) - long.Parse(call.Query["date_begin"]!));
+        Assert.DoesNotContain(app.Provider.Calls, call => call.Endpoint == "getmeasure");
+    }
+
+    [Theory]
+    [InlineData("all")]
+    [InlineData("getstationsdata")]
+    [InlineData("getroommeasure")]
+    public async Task TransientFailuresRetainLastKnownValuesAndExposeWarnings(string endpoint)
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        var first = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        if (endpoint == "all") app.Provider.Fail = true;
+        else app.Provider.FailedEndpoints.Add(endpoint);
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        Assert.NotEmpty(snapshot.Field("warnings").Items());
+        var current = snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items());
+        foreach (var value in current.Where(value => value.Field("updateFailed").ValueKind == JsonValueKind.True))
+        {
+            var previous = first.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items())
+                .Single(previous => previous.Text("id") == value.Text("id"));
+            Assert.Equal(previous.Number("value"), value.Number("value"));
+            Assert.Equal("stale", value.Text("status"));
+        }
+        Assert.Contains(current, value => value.Field("updateFailed").ValueKind == JsonValueKind.True);
+        var calls = app.Provider.Calls.Count;
+        await client.GetAsync("/api/homes/demo-home/measurements");
+        Assert.Equal(calls, app.Provider.Calls.Count);
+    }
+
+    [Fact]
+    public async Task MissingFieldsAndUnreachableDevicesKeepKnownValuesButAreNotFresh()
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        await client.GetAsync("/api/homes/demo-home/measurements");
+        app.Provider.Unreachable = true;
+        app.Provider.MissingTemperature = true;
+        app.Provider.InvalidHistory = true;
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        var measurements = snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items()).ToArray();
+        Assert.All(measurements, value => Assert.Equal("stale", value.Text("status")));
+        Assert.Equal(21.7, measurements.Single(value => value.Text("id") == "station:Temperature").Number("value"));
+        Assert.NotNull(measurements.Single(value => value.Text("id") == "thermostat:Temperature").Number("value"));
+    }
+
+    [Fact]
+    public async Task RetainedValuesExpireAfterFortyEightHoursAndCannotBypassRevokedAuthentication()
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        await client.GetAsync("/api/homes/demo-home/measurements");
+        app.Provider.Fail = true;
+        app.Clock.Now = app.Clock.Now.AddHours(49);
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        Assert.All(snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items()),
+            value => { Assert.Null(value.Number("value")); Assert.Equal("unavailable", value.Text("status")); });
+        app.Provider.FailureStatus = 401;
+        app.Provider.FailureCode = "session_expired";
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/homes/demo-home/measurements")).StatusCode);
+    }
+
+    [Fact]
+    public async Task APermissionFailureNeverUsesLastKnownValuesAsASuccessfulResponse()
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        await client.GetAsync("/api/homes/demo-home/measurements");
+        app.Provider.Fail = true;
+        app.Provider.FailureCode = "provider_permission_denied";
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        var response = await client.GetAsync("/api/homes/demo-home/measurements");
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.Equal("provider_permission_denied", (await response.Content.ReadFromJsonAsync<JsonElement>()).Text("code"));
+    }
+
+    [Fact]
+    public async Task WeatherCacheSuppliesLastKnownValuesEvenBeforeTheFirstSnapshotOfAHome()
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        await client.GetAsync("/api/homes/");
+        app.Provider.FailedEndpoints.Add("getstationsdata");
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        var station = snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items())
+            .Single(value => value.Text("id") == "station:Temperature");
+        Assert.Equal(21.7, station.Number("value"));
+        Assert.Equal("stale", station.Text("status"));
+        Assert.Equal(JsonValueKind.True, station.Field("updateFailed").ValueKind);
+        Assert.Equal(2, app.Provider.Calls.Count(call => call.Endpoint == "getstationsdata"));
+        Assert.DoesNotContain(app.Provider.Calls, call => call.Endpoint == "getmeasure");
+    }
+
+    [Fact]
+    public async Task MissingOptionalMetricsAndOlderProviderSamplesKeepTheNewestKnownSample()
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        var first = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        app.Provider.MissingOptionalMetrics = true;
+        app.Provider.WeatherAge = TimeSpan.FromHours(3);
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        var current = snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items()).ToArray();
+        var previous = first.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items()).ToArray();
+        foreach (var id in new[] { "station:AbsolutePressure", "station:Temperature" })
+        {
+            var value = current.Single(value => value.Text("id") == id);
+            Assert.Equal(previous.Single(value => value.Text("id") == id).Text("measuredAt"), value.Text("measuredAt"));
+            Assert.Equal(previous.Single(value => value.Text("id") == id).Number("value"), value.Number("value"));
+            Assert.Equal("stale", value.Text("status"));
+        }
+    }
+
+    [Fact]
+    public async Task HistoryUnitMatchesItsConversionWhenLastKnownTemperatureUsesPreviousPreferences()
+    {
+        using var app = new ApiFactory();
+        using var client = app.CreateClient();
+        await Login(client);
+        await client.GetAsync("/api/homes/demo-home/measurements");
+        app.Clock.Now = app.Clock.Now.AddSeconds(61);
+        app.Provider.Imperial = true;
+        app.Provider.FailedEndpoints.Add("getroommeasure");
+        var snapshot = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/measurements");
+        var thermostat = snapshot.Field("rooms").Items().SelectMany(room => room.Field("measurements").Items())
+            .Single(value => value.Text("id") == "thermostat:Temperature");
+        Assert.Equal("°C", thermostat.Text("unit"));
+        app.Provider.FailedEndpoints.Clear();
+        var history = await client.GetFromJsonAsync<JsonElement>("/api/homes/demo-home/history/thermostat%3ATemperature?hours=6");
+        Assert.Equal("°F", history.Text("unit"));
+        Assert.All(history.Field("points").Items(), point => Assert.InRange(point.Number("value")!.Value, 65, 75));
     }
 
     [Fact]

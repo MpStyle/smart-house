@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SmartHouse.Api;
+using SmartHouse.Api.BusinessModels;
+using SmartHouse.Api.Entities;
 using Xunit;
 
 namespace SmartHouse.Api.Tests;

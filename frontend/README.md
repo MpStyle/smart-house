@@ -2,6 +2,14 @@
 
 Dashboard Vite, React e TypeScript con MUI, Redux Toolkit e i18next. Pubblicata come sito statico su Azure Storage, raggiungibile tramite Front Door sullo stesso origin del backend.
 
+## Organizzazione
+
+Le pagine sono in `src/component/page/<Pagina>/<Pagina>.tsx`; i componenti condivisi in `src/component/common/<Componente>/<Componente>.tsx`. I componenti specifici di una pagina rimangono nella sua cartella, ciascuno con un tipo locale per le props. I modelli e i tipi condivisi sono in `src/entity/`, la logica e lo store in `src/book/`, le chiamate API in `src/api/`.
+
+Le sei lingue sono definite in `src/locales/*.json` e caricate su richiesta tramite `i18next-http-backend`. Vite pubblica JSON separati con nome hashed sotto `dist/assets/`, compatibili con la cache e il deploy esistenti; non sono incorporati nel bundle JavaScript. Le lingue già caricate vengono riutilizzate. Se una lingua non si carica, l'app passa all'inglese senza avviso a schermo e salva la lingua effettivamente caricata; gli errori rimangono in console. Se anche l'inglese non è disponibile, una schermata essenziale permette di riprovare.
+
+I `console.log` di request e response sono attivi solo in sviluppo: includono metodo/URL/stato e payload, oscurano le proprietà sensibili e non stampano header di autenticazione, cookie o token anti-CSRF. Gli errori rimangono diagnosticabili anche in produzione.
+
 ## Esecuzione locale
 
 Dalla radice del repository:

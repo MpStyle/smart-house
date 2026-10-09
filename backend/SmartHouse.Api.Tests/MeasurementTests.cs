@@ -1,5 +1,7 @@
 using System.Text.Json;
 using SmartHouse.Api;
+using SmartHouse.Api.BusinessModels;
+using SmartHouse.Api.Entities;
 using Xunit;
 
 namespace SmartHouse.Api.Tests;
@@ -14,6 +16,24 @@ public class MeasurementTests
         Assert.False(Measurements.Fresh(now.AddMinutes(-30).AddSeconds(-1), now));
         Assert.False(Measurements.Fresh(null, now));
         Assert.False(Measurements.Fresh(now.AddMinutes(6), now));
+    }
+
+    [Fact]
+    public void LastKnownValuesHaveExplicitStateAndAnExactFortyEightHourLimit()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var measurement = new Measurement("id", "temperature", "Device", 21, "°C", now.AddMinutes(-30), null);
+        Assert.Equal("fresh", Measurements.State(measurement, now));
+        Assert.Equal("stale", Measurements.State(measurement with { MeasuredAt = now.AddMinutes(-30).AddTicks(-1) }, now));
+        Assert.Equal("stale", Measurements.State(measurement with { UpdateFailed = true }, now));
+        Assert.True(Measurements.Retained(measurement with { MeasuredAt = now.AddHours(-48) }, now));
+        Assert.Equal("unavailable", Measurements.State(measurement with { MeasuredAt = now.AddHours(-48).AddTicks(-1) }, now));
+        Assert.False(Measurements.Retained(measurement with { MeasuredAt = null }, now));
+        Assert.False(Measurements.Retained(measurement with { MeasuredAt = now.AddMinutes(6) }, now));
+        Assert.False(Measurements.Retained(measurement with { Value = double.NaN }, now));
+        var snapshot = new Snapshot("home", "UTC", now, [new("room", "Room", [measurement])], []);
+        Assert.Equal(21, Measurements.LimitToRetention(snapshot, now.AddMinutes(1)).Rooms[0].Measurements[0].Value);
+        Assert.Null(Measurements.LimitToRetention(snapshot, now.AddHours(48)).Rooms[0].Measurements[0].Value);
     }
 
     [Fact]

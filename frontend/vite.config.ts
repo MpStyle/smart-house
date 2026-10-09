@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
+    assetsInlineLimit: file => file.endsWith('.json') ? false : undefined,
     rollupOptions: {
       output: {
         manualChunks: {

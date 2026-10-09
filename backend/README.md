@@ -2,6 +2,10 @@
 
 API ASP.NET Core 10 in [`SmartHouse.Api`](SmartHouse.Api/), con test in [`SmartHouse.Api.Tests`](SmartHouse.Api.Tests/). OAuth Netatmo, token cifrati solo lato server, sessioni persistenti di sette giorni, misure e storico autorizzati per account.
 
+I modelli sono separati in `Entities/`, ogni endpoint Minimal API ha un file in `Controllers/`, la logica applicativa è in `BusinessModels/` e l'accesso SQLite in `Repositories/`. `Program.cs` conserva configurazione, dependency injection, autenticazione e middleware; URL, cookie e struttura del database restano invariati.
+
+Le misure includono `status` (`fresh`, `stale`, `unavailable`) e `updateFailed`. Il timestamp del campione governa la freschezza (30 minuti) e la disponibilità dell'ultimo valore (48 ore), non l'ora del recupero. I guasti transitori conservano valori e timestamp della cache con avvisi; errori di autenticazione o permessi non vengono convertiti in risposte riuscite dalla cache.
+
 ## Avvio locale
 
 Dalla radice, con .NET SDK 10 aggiornato:
@@ -16,6 +20,8 @@ ASPNETCORE_ENVIRONMENT=Development DemoMode=true \
 Il frontend va eseguito separatamente su `http://localhost:5173`. `DemoMode=true` abilita soltanto dati simulati e non è consentito in produzione.
 
 Per cambiare porta usare, per esempio, `--urls http://localhost:5090` e aggiornare il target del proxy Vite come descritto nel [README frontend](../frontend/README.md#configurare-la-porta-del-backend-locale). `PublicOrigin` è sempre l'origin **frontend** visibile al browser, non l'URL interno del backend.
+
+Il file opzionale `appsettings.Local.json` sovrascrive i JSON standard; variabili d'ambiente e argomenti della riga di comando hanno precedenza sulle impostazioni locali. Non inserire segreti nei file versionati.
 
 ### Accesso Netatmo reale
 
