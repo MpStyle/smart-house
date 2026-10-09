@@ -1,9 +1,10 @@
-import { configureStore, createAsyncThunk, createListenerMiddleware, createSlice } from '@reduxjs/toolkit';
+import { configureStore, createAsyncThunk, createListenerMiddleware, createSlice, isAnyOf } from '@reduxjs/toolkit';
 import { api } from '../api/api';
 import { preferences, writePreference } from './preferences';
 import { selectLanguage } from './i18n';
 import type { Language } from '../entity/Language';
 import type { TranslationsState } from '../entity/TranslationsState';
+import type { PreferencesState } from '../entity/PreferencesState';
 
 export const changeLanguage = createAsyncThunk<Language, Language, { state: { translations: TranslationsState } }>(
   'translations/changeLanguage',
@@ -24,7 +25,7 @@ const translations = createSlice({
     .addCase(changeLanguage.rejected, state => { state.loading = false; state.ready = false; state.error = true; }),
 });
 
-const listener = createListenerMiddleware();
+const listener = createListenerMiddleware<{ preferences: PreferencesState }>();
 listener.startListening({
   actionCreator: changeLanguage.fulfilled,
   effect: (action, context) => { context.dispatch(preferences.actions.setLanguage(action.payload)); },
@@ -40,6 +41,12 @@ listener.startListening({
 listener.startListening({
   actionCreator: preferences.actions.setHome,
   effect: action => { writePreference('home', action.payload); },
+});
+listener.startListening({
+  matcher: isAnyOf(preferences.actions.setRoomOrder, preferences.actions.setMeasurementOrder),
+  effect: (_, context) => {
+    writePreference('dashboardOrders', JSON.stringify(context.getState().preferences.dashboardOrders));
+  },
 });
 listener.startListening({
   actionCreator: preferences.actions.setExpired,

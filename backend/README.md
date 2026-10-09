@@ -6,6 +6,8 @@ I modelli sono separati in `Entities/`, ogni endpoint Minimal API ha un file in 
 
 Le misure includono `status` (`fresh`, `stale`, `unavailable`) e `updateFailed`. Il timestamp del campione governa la freschezza (30 minuti) e la disponibilità dell'ultimo valore (48 ore), non l'ora del recupero. I guasti transitori conservano valori e timestamp della cache con avvisi; errori di autenticazione o permessi non vengono convertiti in risposte riuscite dalla cache.
 
+La risposta autenticata di `/api/homes/` include `accountName`: il nome presente nell'identità autenticata, altrimenti l'email Netatmo (`user.email` di `homesdata` o `user.mail` di `getstationsdata`). Il recupero riutilizza la discovery e la sua cache, senza nuove chiamate o scope OAuth. Se il provider non espone l'identità, il campo è `null`; in caso di guasti transitori si conserva quella già recuperata. Il frontend oscura questo campo nei log di sviluppo.
+
 ## Avvio locale
 
 Dalla radice, con .NET SDK 10 aggiornato:

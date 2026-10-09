@@ -34,11 +34,19 @@ public sealed class CountingProvider(TestClock clock) : INetatmoClient
     public bool MissingOptionalMetrics { get; set; }
     public TimeSpan? WeatherAge { get; set; }
     public bool Imperial { get; set; }
+    public string? AccountEmail { get; set; }
+    public string? WeatherEmail { get; set; }
     public Task<JsonElement> Get(string sid, string endpoint, Dictionary<string, string?>? query, CancellationToken ct)
     {
         Calls.Add((endpoint, query));
         if (Fail || FailedEndpoints.Contains(endpoint)) throw new ProviderException(FailureCode, FailureStatus);
         var result = DemoData.Get(endpoint, query, clock.Now);
+        if (endpoint == "homesdata" && AccountEmail is not null || endpoint == "getstationsdata" && WeatherEmail is not null)
+        {
+            var json = System.Text.Json.Nodes.JsonNode.Parse(result.GetRawText())!;
+            json["user"]![endpoint == "homesdata" ? "email" : "mail"] = endpoint == "homesdata" ? AccountEmail : WeatherEmail;
+            result = JsonSerializer.SerializeToElement(json);
+        }
         if (endpoint == "getroommeasure" && ThermostatAge is { } age)
             result = JsonSerializer.SerializeToElement(new Dictionary<string, double?[]>
             {
@@ -116,6 +124,33 @@ public class ApiTests
         request.Headers.Add("X-CSRF-TOKEN", await Csrf(client));
         using var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("person@example.test", "weather@example.test", "person@example.test")]
+    [InlineData(null, "weather@example.test", "weather@example.test")]
+    [InlineData("  ", " weather@example.test ", "weather@example.test")]
+    [InlineData(null, null, null)]
+    public async Task AccountIdentityUsesExistingDiscoveryAndReadOnlyScopes(string? email, string? weatherEmail, string? expected)
+    {
+        using var app = new ApiFactory();
+        app.Provider.AccountEmail = email;
+        app.Provider.WeatherEmail = weatherEmail;
+        using var client = app.CreateClient();
+        await Login(client);
+        var homes = await client.GetFromJsonAsync<JsonElement>("/api/homes/");
+        Assert.Equal(expected, homes.Text("accountName"));
+        Assert.Equal(new[] { "homesdata", "getstationsdata" }, app.Provider.Calls.Select(call => call.Endpoint));
+        await client.GetAsync("/api/homes/");
+        Assert.Equal(2, app.Provider.Calls.Count);
+        if (expected is not null)
+        {
+            app.Clock.Now = app.Clock.Now.AddSeconds(61);
+            app.Provider.Fail = true;
+            var cached = await client.GetFromJsonAsync<JsonElement>("/api/homes/");
+            Assert.Equal(expected, cached.Text("accountName"));
+            Assert.NotEmpty(cached.Field("warnings").Items());
+        }
     }
 
     [Fact]

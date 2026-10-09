@@ -1,13 +1,12 @@
 import { lazy, Suspense, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Paper, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import ArrowBack from '@mui/icons-material/ArrowBack';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Alert, Box, CircularProgress, Paper, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Navigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useHistoryQuery, useSnapshotQuery } from '../../../api/api';
+import { DASHBOARD_ROUTE } from '../../../book/routes';
 import type { Home } from '../../../entity/Home';
 import Failure from '../../common/Failure/Failure';
 import Loading from '../../common/Loading/Loading';
-import PageActions from '../../common/PageActions/PageActions';
 
 const HistoryChart = lazy(() => import('./HistoryChart'));
 interface HistoryProps { homes: Home[] }
@@ -20,15 +19,18 @@ export default function History({ homes }: HistoryProps) {
   const snapshot = useSnapshotQuery(homeId ?? '', { skip: !home });
   const measurement = snapshot.currentData?.rooms.flatMap(room => room.measurements).find(item => item.id === measurementId);
   const query = useHistoryQuery({ homeId: homeId ?? '', measurementId: measurementId ?? '', hours }, { skip: !home || !measurement?.hasHistory });
-  if (!home) return <Navigate to="/" replace />;
+  
+  if (!home) return <Navigate to={DASHBOARD_ROUTE} replace />;
+
   return <Stack spacing={3}>
-    <PageActions><Button component={Link} to="/" startIcon={<ArrowBack />}>{t('back')}</Button></PageActions>
     {snapshot.isError && <Failure retry={() => void snapshot.refetch()} />}
+
     {snapshot.isLoading && <Loading />}
+
     {measurement && <>
-      <Typography variant="overline" color="text.secondary">{t('history')} · {home.name}</Typography>
       <Typography variant="h3" sx={{ fontSize: { xs: 32, md: 44 }, fontWeight: 600 }}>{t(measurement.kind)}</Typography>
       <Typography color="text.secondary">{measurement.deviceName} · {measurement.unit}</Typography>
+
       {!measurement.hasHistory ? <Alert severity="info">{t('historyMissing')}</Alert> : <>
         <ToggleButtonGroup exclusive value={hours} aria-label={t('range')} onChange={(_, value: number | null) => { if (value !== null) setHours(value); }}>
           {[6, 12, 24, 48].map(range => <ToggleButton key={range} value={range}>{t('hours', { count: range })}</ToggleButton>)}

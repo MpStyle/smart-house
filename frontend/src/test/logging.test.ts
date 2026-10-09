@@ -7,7 +7,7 @@ it('redacts nested credentials and never logs request headers', () => {
   const log = vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.stubEnv('DEV', true);
   logApiRequest({ url: '/auth/demo', headers: { 'X-CSRF-TOKEN': 'private-header' }, body: { csrfToken: 'private-body', name: 'demo' } });
-  logApiResponse('/auth/session', { data: { csrfToken: 'private-response', authenticated: true } });
+  logApiResponse('/auth/session', { data: { csrfToken: 'private-response', authenticated: true, accountName: 'private-identity', email: 'private-email' } });
   expect(JSON.stringify(log.mock.calls)).not.toContain('private');
   expect(JSON.stringify(log.mock.calls)).toContain('REDACTED');
   expect(redact([{ authorization: 'secret', nested: { refreshToken: 'secret', value: 21 } }]))

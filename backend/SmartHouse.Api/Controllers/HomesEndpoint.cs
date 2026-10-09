@@ -9,6 +9,11 @@ public static class HomesEndpoint
         endpoints.MapGet("/", async (HttpContext context, DashboardService service, CancellationToken ct) =>
         {
             var discovery = await service.Discover(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!, ct);
-            return Results.Ok(new { homes = discovery.Homes.Select(home => new { home.Id, home.Name, home.Timezone }), discovery.Warnings });
+            return Results.Ok(new
+            {
+                homes = discovery.Homes.Select(home => new { home.Id, home.Name, home.Timezone }),
+                discovery.Warnings,
+                accountName = context.User.FindFirstValue(ClaimTypes.Name) ?? discovery.AccountName
+            });
         });
 }

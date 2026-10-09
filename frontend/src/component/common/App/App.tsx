@@ -17,11 +17,20 @@ export default function App() {
   const session = useSessionQuery();
   useSessionExpiration(session.data);
   useEffect(() => { document.documentElement.lang = pref.language; }, [pref.language]);
+
   return <ThemeProvider theme={theme}>
     <CssBaseline />
+
     {(!session.data?.authenticated || pref.expired) && <AppBar />}
-    {session.isLoading && <Container sx={{ py: 6 }}><Loading /></Container>}
-    {session.isError && <Container sx={{ py: 6 }}><Failure retry={() => void session.refetch()} /></Container>}
+
+    {session.isLoading && <Container sx={{ py: 6 }}>
+      <Loading />
+    </Container>}
+
+    {session.isError && <Container sx={{ py: 6 }}>
+      <Failure retry={() => void session.refetch()} />
+    </Container>}
+    
     {session.data && (session.data.authenticated && !pref.expired
       ? <Authenticated session={session.data} />
       : <Login session={session.data} reload={async () => { await session.refetch(); }} />)}

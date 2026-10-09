@@ -134,4 +134,4 @@ npm run test:e2e
 
 Gli scenari desktop e mobile verificano accesso, misure duplicate, grafici, cambio lingua, logout, assenza di polling e scadenza a pagina aperta.
 
-Su schermi sotto 600 px le card sono due per riga: nome dispositivo e data/ora del campione sono nascosti, mentre titoli delle stanze, stato scaduto e aggiornamenti falliti restano visibili. L'app bar contiene **Aggiorna** nella dashboard e **Torna alla dashboard** nello storico; l'intervallo del grafico rimane accanto al grafico.
+Su schermi sotto 600 px le card sono due per riga: nome dispositivo e data/ora del campione sono nascosti, mentre titoli delle stanze, stato scaduto e aggiornamenti falliti restano visibili. L'app bar contiene **Aggiorna** nella dashboard; nello storico sostituisce l'icona della casa con una freccia **Indietro**, anche durante caricamenti ed errori. La freccia torna alla pagina interna precedente oppure alla dashboard quando lo storico viene aperto direttamente, senza uscire dall'app. L'intervallo del grafico rimane accanto al grafico.

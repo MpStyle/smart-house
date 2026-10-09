@@ -65,7 +65,10 @@ public sealed class DashboardService(INetatmoClient client, SessionStore store, 
         var units = new Units((int)(admin.Number("unit") ?? user.Number("unit_system") ?? cached?.Value.Units.System ?? 0),
             (int)(admin.Number("windunit") ?? user.Number("unit_wind") ?? cached?.Value.Units.Wind ?? 0),
             (int)(admin.Number("pressureunit") ?? user.Number("unit_pressure") ?? cached?.Value.Units.Pressure ?? 0));
-        var result = new Discovery(homes.OrderBy(home => home.Name, StringComparer.OrdinalIgnoreCase).ToArray(), units, warnings.ToArray());
+        var accountName = user.Text("email")?.Trim();
+        if (string.IsNullOrEmpty(accountName)) accountName = weather?.Field("user").Text("mail")?.Trim();
+        if (string.IsNullOrEmpty(accountName)) accountName = cached?.Value.AccountName;
+        var result = new Discovery(homes.OrderBy(home => home.Name, StringComparer.OrdinalIgnoreCase).ToArray(), units, warnings.ToArray(), accountName);
         store.Cache(sid, "discovery", result);
         if (energy is not null) store.Cache(sid, "energyTopology", energy.Value);
         if (weather is not null) store.Cache(sid, "weather", weather.Value);

@@ -1,6 +1,6 @@
 import type { FetchArgs, FetchBaseQueryError, FetchBaseQueryMeta } from '@reduxjs/toolkit/query';
 
-const sensitiveKey = /token|cookie|authorization|secret|password|csrf/i;
+const sensitiveKey = /token|cookie|authorization|secret|password|csrf|accountName|email|mail/i;
 
 export function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);

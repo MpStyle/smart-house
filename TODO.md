@@ -27,6 +27,6 @@
 - Tutte le card mostrano campioni validi fino a 48 ore: freschi entro 30 minuti, poi con avviso di dato scaduto; oltre 48 ore sono non disponibili.
 - Il termostato cerca il campione nello storico delle ultime 48 ore; i sensori meteo usano risposta corrente e cache. In caso di aggiornamento fallito si conserva l'ultimo valore noto con avviso esplicito, senza aggirare errori di autenticazione o permessi.
 - Sotto 600 px si nascondono nome dispositivo e data/ora nelle card, mantenendo titoli delle stanze e avvisi; nessuna età relativa su smartphone.
-- App bar: refresh nella dashboard e ritorno alla dashboard nello storico; scelta dell'intervallo accanto al grafico.
+- App bar: refresh nella dashboard; nello storico `showBack` booleano sostituisce l'icona della casa con la freccia Indietro, senza usare `PageActionsContext`. Ritorno alla pagina interna precedente, con dashboard come ripiego; scelta dell'intervallo accanto al grafico.
 - Lingua non caricata: ripiego inglese senza avviso a schermo; se anche l'inglese manca, schermata di errore con nuovo tentativo.
 - URL e Minimal API invariati, cache di un minuto e nessun polling; payload nei log di sviluppo con dati sensibili oscurati.

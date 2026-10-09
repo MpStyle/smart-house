@@ -3,6 +3,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { languages, type Language } from '../entity/Language';
 import type { PreferencesState } from '../entity/PreferencesState';
 import type { ThemePreference } from '../entity/ThemePreference';
+import { parseDashboardOrders } from './dashboardOrder';
 export function readPreference(key: string): string | null {
   try { return localStorage.getItem(`smart-house.${key}`); }
   catch (error) { console.warn('Browser preferences are unavailable.', error); return null; }
@@ -29,6 +30,7 @@ const initialState: PreferencesState = {
   theme: savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'system',
   homeId: readPreference('home') ?? '',
   expired: false,
+  dashboardOrders: parseDashboardOrders(readPreference('dashboardOrders')),
 };
 export const preferences = createSlice({
   name: 'preferences',
@@ -38,5 +40,15 @@ export const preferences = createSlice({
     setTheme(state, action: PayloadAction<ThemePreference>) { state.theme = action.payload; },
     setHome(state, action: PayloadAction<string>) { state.homeId = action.payload; },
     setExpired(state, action: PayloadAction<boolean>) { state.expired = action.payload; },
+    setRoomOrder(state, action: PayloadAction<{ homeId: string; ids: string[] }>) {
+      const { homeId, ids } = action.payload;
+      state.dashboardOrders[homeId] ??= { roomIds: [], measurementIds: {} };
+      state.dashboardOrders[homeId].roomIds = ids;
+    },
+    setMeasurementOrder(state, action: PayloadAction<{ homeId: string; roomId: string; ids: string[] }>) {
+      const { homeId, roomId, ids } = action.payload;
+      state.dashboardOrders[homeId] ??= { roomIds: [], measurementIds: {} };
+      state.dashboardOrders[homeId].measurementIds[roomId] = ids;
+    },
   },
 });
