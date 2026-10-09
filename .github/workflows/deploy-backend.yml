@@ -1,0 +1,70 @@
+name: Deploy Backend
+on:
+  workflow_call:
+    inputs:
+      ci_run_id:
+        type: string
+        default: ''
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
+jobs:
+  deploy:
+    name: Backend to App Service
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/current-release
+        with:
+          section: backend
+      - id: ci
+        uses: ./.github/actions/ci-artifact
+        with:
+          section: backend
+          run-id: ${{ inputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-package
+          path: package
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.ci.outputs.run-id }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: targets
+        uses: ./.github/actions/azure-targets
+        with:
+          resource-group: ${{ vars.AZURE_RESOURCE_GROUP }}
+          deployment-name: ${{ vars.AZURE_DEPLOYMENT_NAME || 'smart-house' }}
+      - name: Verify Netatmo configuration and deploy verified backend
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          API_NAME: ${{ steps.targets.outputs.api }}
+          VAULT: ${{ steps.targets.outputs.vault }}
+          PUBLIC_URL: ${{ steps.targets.outputs.url }}
+        run: |
+          az keyvault secret show --vault-name "$VAULT" --name netatmo-client-id --query id --output none
+          az keyvault secret show --vault-name "$VAULT" --name netatmo-client-secret --query id --output none
+          APP_ID=$(az webapp show --resource-group "$RESOURCE_GROUP" --name "$API_NAME" --query id --output tsv)
+          az rest --method post --url "https://management.azure.com${APP_ID}/config/configreferences/appsettings/refresh?api-version=2022-03-01" --output none
+          az webapp deploy --resource-group "$RESOURCE_GROUP" --name "$API_NAME" \
+            --src-path package/api.zip --type zip --output none
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/api/health"
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/api/auth/session" \
+            | jq -e '.authAvailable == true and .demoAvailable == false' > /dev/null
+          printf 'Backend: %s/api/health\nNetatmo callback: %s/api/auth/callback\nCommit: %s\n' \
+            "$PUBLIC_URL" "$PUBLIC_URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

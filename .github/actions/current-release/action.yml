@@ -1,0 +1,24 @@
+name: Verify release scope
+description: Refuse non-main or superseded section releases without blocking older README-only commits.
+inputs:
+  section:
+    description: frontend, backend or infrastructure
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+          echo "::error::Production deployments are allowed only from main."
+          exit 1
+        fi
+        git fetch --no-tags origin main
+    - uses: actions/github-script@v7
+      env:
+        SECTION: ${{ inputs.section }}
+      with:
+        script: |
+          const { changedFiles, changedSections } = await import(`${process.env.GITHUB_WORKSPACE}/.github/scripts/sections.mjs`);
+          if (changedSections(changedFiles(context.sha, 'origin/main'))[process.env.SECTION])
+            throw new Error(`A newer main commit changed ${process.env.SECTION}. This outdated deployment is stopped; use the newer release.`);

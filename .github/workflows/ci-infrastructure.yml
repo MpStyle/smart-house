@@ -1,0 +1,47 @@
+name: CI Infrastructure
+on:
+  push:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci-infrastructure.yml'
+      - '.github/workflows/deploy-infrastructure.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/actions/**'
+      - '.github/scripts/**'
+      - '!infra/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!.github/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci-infrastructure.yml'
+      - '.github/workflows/deploy-infrastructure.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/actions/**'
+      - '.github/scripts/**'
+      - '!infra/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!.github/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: ci-infrastructure-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    name: Infrastructure checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify pipeline selection
+        run: node --test .github/scripts/sections.test.mjs
+      - name: Compile infrastructure and parameters
+        run: |
+          az bicep build --file infra/main.bicep --outfile "${RUNNER_TEMP}/main.json"
+          az bicep build-params --file infra/main.bicepparam --outfile "${RUNNER_TEMP}/parameters.json"

@@ -1,0 +1,70 @@
+name: Deploy Frontend
+on:
+  workflow_call:
+    inputs:
+      ci_run_id:
+        type: string
+        default: ''
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: production-frontend
+  cancel-in-progress: false
+jobs:
+  deploy:
+    name: Frontend to Storage
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/current-release
+        with:
+          section: frontend
+      - id: ci
+        uses: ./.github/actions/ci-artifact
+        with:
+          section: frontend
+          run-id: ${{ inputs.ci_run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-package
+          path: frontend/dist
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.ci.outputs.run-id }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: targets
+        uses: ./.github/actions/azure-targets
+        with:
+          resource-group: ${{ vars.AZURE_RESOURCE_GROUP }}
+          deployment-name: ${{ vars.AZURE_DEPLOYMENT_NAME || 'smart-house' }}
+      - name: Upload verified frontend and purge its cache
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          STORAGE: ${{ steps.targets.outputs.storage }}
+          PROFILE: ${{ steps.targets.outputs.profile }}
+          ENDPOINT: ${{ steps.targets.outputs.endpoint }}
+          PUBLIC_URL: ${{ steps.targets.outputs.url }}
+        run: |
+          az storage blob upload-batch --account-name "$STORAGE" --auth-mode login \
+            --destination '$web/assets' --source frontend/dist/assets --overwrite \
+            --content-cache-control 'public,max-age=31536000,immutable' --output none
+          az storage blob upload --account-name "$STORAGE" --auth-mode login \
+            --container-name '$web' --name index.html --file frontend/dist/index.html --overwrite \
+            --content-type 'text/html; charset=utf-8' --content-cache-control 'no-cache' --output none
+          az afd endpoint purge --resource-group "$RESOURCE_GROUP" --profile-name "$PROFILE" \
+            --endpoint-name "$ENDPOINT" --content-paths '/' '/index.html' --output none
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/" -o /dev/null
+          printf 'Frontend: %s\nCommit: %s\n' "$PUBLIC_URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

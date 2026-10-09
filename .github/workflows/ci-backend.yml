@@ -1,0 +1,63 @@
+name: CI Backend
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'global.json'
+      - 'SmartHouse.sln'
+      - '.github/workflows/ci-backend.yml'
+      - '.github/workflows/deploy-backend.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/actions/**'
+      - '.github/scripts/**'
+      - '!backend/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!.github/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'global.json'
+      - 'SmartHouse.sln'
+      - '.github/workflows/ci-backend.yml'
+      - '.github/workflows/deploy-backend.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/actions/**'
+      - '.github/scripts/**'
+      - '!backend/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!.github/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: ci-backend-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    name: Backend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify pipeline selection
+        run: node --test .github/scripts/sections.test.mjs
+      - name: Test and package backend
+        run: |
+          dotnet test backend/SmartHouse.Api.Tests --configuration Release --verbosity quiet
+          dotnet publish backend/SmartHouse.Api -c Release -o "${RUNNER_TEMP}/api" --verbosity quiet
+          (cd "${RUNNER_TEMP}/api" && zip -qr "${RUNNER_TEMP}/api.zip" .)
+      - name: Store verified backend
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-package
+          path: ${{ runner.temp }}/api.zip
+          if-no-files-found: error
+          retention-days: 7

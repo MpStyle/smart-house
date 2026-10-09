@@ -1,0 +1,51 @@
+name: Read existing Azure deployment
+description: Read verified infrastructure outputs without provisioning resources.
+inputs:
+  resource-group:
+    required: true
+    description: Existing dedicated resource group
+  deployment-name:
+    default: smart-house
+    description: Bicep deployment name
+outputs:
+  storage:
+    description: Frontend storage account
+    value: ${{ steps.targets.outputs.storage }}
+  api:
+    description: Backend App Service
+    value: ${{ steps.targets.outputs.api }}
+  vault:
+    description: Netatmo Key Vault
+    value: ${{ steps.targets.outputs.vault }}
+  profile:
+    description: Front Door profile
+    value: ${{ steps.targets.outputs.profile }}
+  endpoint:
+    description: Front Door endpoint
+    value: ${{ steps.targets.outputs.endpoint }}
+  url:
+    description: Public HTTPS origin
+    value: ${{ steps.targets.outputs.url }}
+runs:
+  using: composite
+  steps:
+    - id: targets
+      shell: bash
+      env:
+        RESOURCE_GROUP: ${{ inputs.resource-group }}
+        DEPLOYMENT_NAME: ${{ inputs.deployment-name }}
+      run: |
+        test -n "$RESOURCE_GROUP" || { echo "::error::AZURE_RESOURCE_GROUP is required."; exit 1; }
+        az deployment group show --resource-group "$RESOURCE_GROUP" --name "$DEPLOYMENT_NAME" \
+          --query properties.outputs --output json > "${RUNNER_TEMP}/azure-outputs.json"
+        jq -e 'all(.frontendStorage.value, .apiName.value, .keyVaultName.value,
+          .frontDoorProfile.value, .frontDoorEndpoint.value, .publicUrl.value;
+          type == "string" and length > 0)' "${RUNNER_TEMP}/azure-outputs.json" > /dev/null
+        {
+          echo "storage=$(jq -r '.frontendStorage.value' "${RUNNER_TEMP}/azure-outputs.json")"
+          echo "api=$(jq -r '.apiName.value' "${RUNNER_TEMP}/azure-outputs.json")"
+          echo "vault=$(jq -r '.keyVaultName.value' "${RUNNER_TEMP}/azure-outputs.json")"
+          echo "profile=$(jq -r '.frontDoorProfile.value' "${RUNNER_TEMP}/azure-outputs.json")"
+          echo "endpoint=$(jq -r '.frontDoorEndpoint.value' "${RUNNER_TEMP}/azure-outputs.json")"
+          echo "url=$(jq -r '.publicUrl.value' "${RUNNER_TEMP}/azure-outputs.json")"
+        } >> "$GITHUB_OUTPUT"

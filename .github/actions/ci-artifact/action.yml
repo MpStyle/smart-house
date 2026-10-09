@@ -1,0 +1,32 @@
+name: Resolve verified CI artifact
+description: Select a successful CI run for this exact main commit before downloading a package.
+inputs:
+  section:
+    description: frontend or backend
+    required: true
+  run-id:
+    description: Optional expected successful CI run
+    default: ''
+outputs:
+  run-id:
+    description: Verified run ID
+    value: ${{ steps.ci.outputs.run-id }}
+runs:
+  using: composite
+  steps:
+    - id: ci
+      uses: actions/github-script@v7
+      env:
+        SECTION: ${{ inputs.section }}
+        EXPECTED_RUN: ${{ inputs.run-id }}
+      with:
+        script: |
+          const { waitForCi } = await import(`${process.env.GITHUB_WORKSPACE}/.github/scripts/sections.mjs`);
+          const runs = await waitForCi({
+            github, ...context.repo, sha: context.sha, sections: [process.env.SECTION],
+            log: core.info, timeoutMs: 0,
+          });
+          const id = runs[process.env.SECTION];
+          if (process.env.EXPECTED_RUN && String(id) !== process.env.EXPECTED_RUN)
+            throw new Error('The successful CI run changed; rerun the deployment to use its current artifact.');
+          core.setOutput('run-id', String(id));

@@ -1,0 +1,119 @@
+name: Deploy Infrastructure
+on:
+  workflow_call:
+    inputs:
+      confirm_costs:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      confirm_costs:
+        description: 'Create/update Azure resources and accept their recurring costs'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: production-infrastructure
+  cancel-in-progress: false
+jobs:
+  deploy:
+    name: Infrastructure to Azure
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      DEPLOYMENT_NAME: ${{ vars.AZURE_DEPLOYMENT_NAME || 'smart-house' }}
+      APP_NAME: ${{ vars.AZURE_APP_NAME }}
+      BUDGET_EMAILS: ${{ vars.AZURE_BUDGET_EMAILS }}
+      MONTHLY_BUDGET: ${{ vars.AZURE_MONTHLY_BUDGET }}
+      BUDGET_START: ${{ vars.AZURE_BUDGET_START }}
+    steps:
+      - name: Require cost confirmation
+        env:
+          CONFIRM_COSTS: ${{ inputs.confirm_costs }}
+        run: |
+          if [ "$CONFIRM_COSTS" != "true" ]; then
+            echo "::error::Infrastructure creation/update requires confirm_costs."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/current-release
+        with:
+          section: infrastructure
+      - name: Verify and compile deployment parameters
+        run: |
+          node --test .github/scripts/sections.test.mjs
+          az bicep build --file infra/main.bicep --outfile "${RUNNER_TEMP}/main.json"
+          az bicep build-params --file infra/main.bicepparam --outfile "${RUNNER_TEMP}/parameters.json"
+          if [ -n "$APP_NAME" ]; then
+            jq --arg value "$APP_NAME" '.parameters.appName.value=$value' "${RUNNER_TEMP}/parameters.json" > "${RUNNER_TEMP}/updated.json"
+            mv "${RUNNER_TEMP}/updated.json" "${RUNNER_TEMP}/parameters.json"
+          fi
+          if [ -n "$BUDGET_EMAILS" ]; then
+            jq -en --argjson emails "$BUDGET_EMAILS" '$emails | type == "array" and all(.[]; type == "string" and contains("@"))' > /dev/null
+            jq --argjson value "$BUDGET_EMAILS" '.parameters.budgetEmails.value=$value' "${RUNNER_TEMP}/parameters.json" > "${RUNNER_TEMP}/updated.json"
+            mv "${RUNNER_TEMP}/updated.json" "${RUNNER_TEMP}/parameters.json"
+          fi
+          if [ -n "$MONTHLY_BUDGET" ]; then
+            jq -en --argjson value "$MONTHLY_BUDGET" '$value | type == "number" and floor == . and . > 0' > /dev/null
+            jq --argjson value "$MONTHLY_BUDGET" '.parameters.monthlyBudget.value=$value' "${RUNNER_TEMP}/parameters.json" > "${RUNNER_TEMP}/updated.json"
+            mv "${RUNNER_TEMP}/updated.json" "${RUNNER_TEMP}/parameters.json"
+          fi
+          if [ -n "$BUDGET_START" ]; then
+            jq --arg value "$BUDGET_START" '.parameters.budgetStart.value=$value' "${RUNNER_TEMP}/parameters.json" > "${RUNNER_TEMP}/updated.json"
+            mv "${RUNNER_TEMP}/updated.json" "${RUNNER_TEMP}/parameters.json"
+          fi
+          if jq -e '.parameters.budgetEmails.value | length > 0' "${RUNNER_TEMP}/parameters.json" > /dev/null; then
+            jq -e '.parameters.budgetStart.value | test("^[0-9]{4}-[0-9]{2}-01$")' "${RUNNER_TEMP}/parameters.json" > /dev/null \
+              || { echo "::error::Set AZURE_BUDGET_START (YYYY-MM-01) or a stable budgetStart in main.bicepparam."; exit 1; }
+          fi
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Provision without dropping the existing frontend origin
+        run: |
+          test -n "$RESOURCE_GROUP" || { echo "::error::AZURE_RESOURCE_GROUP is required."; exit 1; }
+          az group show --name "$RESOURCE_GROUP" --output none
+          WEB_HOST=''
+          EXISTING=$(az deployment group list --resource-group "$RESOURCE_GROUP" \
+            --query "[?name=='$DEPLOYMENT_NAME'].name | [0]" --output tsv)
+          if [ -n "$EXISTING" ]; then
+            STORAGE=$(az deployment group show --resource-group "$RESOURCE_GROUP" --name "$DEPLOYMENT_NAME" \
+              --query properties.outputs.frontendStorage.value --output tsv)
+            test -n "$STORAGE" || { echo "::error::Previous deployment has no frontendStorage output; inspect it before retrying."; exit 1; }
+            WEB_HOST=$(az storage account show --name "$STORAGE" --resource-group "$RESOURCE_GROUP" --query primaryEndpoints.web --output tsv)
+            WEB_HOST=${WEB_HOST#https://}
+            WEB_HOST=${WEB_HOST%/}
+          fi
+          az deployment group create --name "$DEPLOYMENT_NAME" --resource-group "$RESOURCE_GROUP" \
+            --template-file "${RUNNER_TEMP}/main.json" --parameters "@${RUNNER_TEMP}/parameters.json" frontendWebHost="$WEB_HOST" \
+            --query properties.outputs --output json > "${RUNNER_TEMP}/outputs.json"
+          STORAGE=$(jq -er '.frontendStorage.value | select(type == "string" and length > 0)' "${RUNNER_TEMP}/outputs.json")
+          az storage blob service-properties update --account-name "$STORAGE" --auth-mode login \
+            --static-website --index-document index.html --404-document index.html --output none
+          ENABLED_HOST=$(az storage account show --name "$STORAGE" --resource-group "$RESOURCE_GROUP" --query primaryEndpoints.web --output tsv)
+          ENABLED_HOST=${ENABLED_HOST#https://}
+          ENABLED_HOST=${ENABLED_HOST%/}
+          test -n "$ENABLED_HOST" || { echo "::error::Static website endpoint is missing."; exit 1; }
+          if [ "$WEB_HOST" != "$ENABLED_HOST" ]; then
+            az deployment group create --name "$DEPLOYMENT_NAME" --resource-group "$RESOURCE_GROUP" \
+              --template-file "${RUNNER_TEMP}/main.json" --parameters "@${RUNNER_TEMP}/parameters.json" frontendWebHost="$ENABLED_HOST" \
+              --query properties.outputs --output json > "${RUNNER_TEMP}/outputs.json"
+          fi
+          {
+            echo '## Azure infrastructure'
+            jq -r 'to_entries[] | "\(.key): \(.value.value)"' "${RUNNER_TEMP}/outputs.json"
+            echo ''
+            echo 'Bootstrap: configure Netatmo secrets and the callback before deploying the backend.'
+          } >> "$GITHUB_STEP_SUMMARY"

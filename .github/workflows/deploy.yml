@@ -1,0 +1,94 @@
+name: Deploy changed sections
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'infra/**'
+      - 'global.json'
+      - 'SmartHouse.sln'
+      - '.github/workflows/ci-frontend.yml'
+      - '.github/workflows/ci-backend.yml'
+      - '.github/workflows/ci-infrastructure.yml'
+      - '.github/workflows/deploy-frontend.yml'
+      - '.github/workflows/deploy-backend.yml'
+      - '.github/workflows/deploy-infrastructure.yml'
+      - '.github/workflows/deploy.yml'
+      - '.github/actions/**'
+      - '.github/scripts/**'
+      - '!frontend/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!backend/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!infra/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+      - '!.github/**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+defaults:
+  run:
+    shell: bash
+jobs:
+  changes:
+    name: Select changed sections and wait for their CI
+    if: vars.AZURE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      frontend: ${{ steps.scope.outputs.frontend }}
+      backend: ${{ steps.scope.outputs.backend }}
+      infrastructure: ${{ steps.scope.outputs.infrastructure }}
+      frontend-run: ${{ steps.scope.outputs.frontend-run }}
+      backend-run: ${{ steps.scope.outputs.backend-run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve scope and successful CI runs for this commit
+        id: scope
+        uses: actions/github-script@v7
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        with:
+          script: |
+            const { changedFiles, changedSections, waitForCi } = await import(`${process.env.GITHUB_WORKSPACE}/.github/scripts/sections.mjs`);
+            const sections = changedSections(changedFiles(process.env.BEFORE_SHA, context.sha));
+            for (const [section, changed] of Object.entries(sections)) core.setOutput(section, String(changed));
+            const selected = Object.keys(sections).filter(section => sections[section]);
+            const runs = await waitForCi({ github, ...context.repo, sha: context.sha, sections: selected, log: core.info });
+            for (const section of ['frontend', 'backend']) core.setOutput(`${section}-run`, runs[section] ? String(runs[section]) : '');
+            await core.summary.addHeading('Automatic deployment scope').addTable([
+              [{ data: 'Section', header: true }, { data: 'Changed', header: true }],
+              ...Object.entries(sections).map(([section, changed]) => [section, String(changed)]),
+            ]).write();
+  infrastructure:
+    name: Deploy infrastructure
+    needs: changes
+    if: needs.changes.outputs.infrastructure == 'true'
+    uses: ./.github/workflows/deploy-infrastructure.yml
+    with:
+      confirm_costs: true
+    secrets: inherit
+  backend:
+    name: Deploy backend
+    needs: [changes, infrastructure]
+    if: >-
+      always() && !cancelled() && needs.changes.result == 'success' &&
+      needs.changes.outputs.backend == 'true' &&
+      (needs.infrastructure.result == 'success' || needs.infrastructure.result == 'skipped')
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      ci_run_id: ${{ needs.changes.outputs.backend-run }}
+    secrets: inherit
+  frontend:
+    name: Deploy frontend
+    needs: [changes, infrastructure, backend]
+    if: >-
+      always() && !cancelled() && needs.changes.result == 'success' &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.infrastructure.result == 'success' || needs.infrastructure.result == 'skipped') &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped')
+    uses: ./.github/workflows/deploy-frontend.yml
+    with:
+      ci_run_id: ${{ needs.changes.outputs.frontend-run }}
+    secrets: inherit
