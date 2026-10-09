@@ -8,6 +8,12 @@ import TranslationBootstrap from './component/common/TranslationBootstrap/Transl
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Provider store={store}><TranslationBootstrap><HashRouter><App /></HashRouter></TranslationBootstrap></Provider>
+    <Provider store={store}>
+      <TranslationBootstrap>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </TranslationBootstrap>
+    </Provider>
   </React.StrictMode>,
 );

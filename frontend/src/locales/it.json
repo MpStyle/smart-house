@@ -65,6 +65,5 @@
   "maxWind": "Vento massimo di oggi",
   "maxWindAngle": "Direzione del vento massimo",
   "historyMissing": "Questa misurazione non ha uno storico supportato.",
-  "notFound": "Questa misurazione non è più disponibile.",
-  "updateFailed": "Aggiornamento non riuscito"
+  "notFound": "Questa misurazione non è più disponibile."
 }

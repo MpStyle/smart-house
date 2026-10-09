@@ -37,8 +37,6 @@ export default function MeasurementCard({ measurement, home, now }: MeasurementC
     {available && measurement.measuredAt && <Typography data-testid="measurement-time" variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, mt: 1 }}>
       {t('measured', { time: formatTime(measurement.measuredAt, home.timezone, i18n.language, true) })}
     </Typography>}
-    
-    {measurement.updateFailed && <Typography variant="caption" color="warning.main" sx={{ display: 'block' }}>{t('updateFailed')}</Typography>}
   </>;
 
   const sx = {

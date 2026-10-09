@@ -65,6 +65,5 @@
   "maxWind": "Stärkster Wind heute",
   "maxWindAngle": "Richtung des stärksten Winds",
   "historyMissing": "Für diesen Messwert ist kein Verlauf verfügbar.",
-  "notFound": "Dieser Messwert ist nicht mehr verfügbar.",
-  "updateFailed": "Aktualisierung fehlgeschlagen"
+  "notFound": "Dieser Messwert ist nicht mehr verfügbar."
 }

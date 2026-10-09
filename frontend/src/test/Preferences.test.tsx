@@ -26,13 +26,34 @@ describe('settings radio preferences', () => {
     render(<Provider store={store}><Preferences /></Provider>);
     const language = within(screen.getByRole('region', { name: 'Language' }));
     const theme = within(screen.getByRole('region', { name: 'Appearance' }));
-    expect(language.getByRole('heading', { level: 2, name: 'Language' })).toBeInTheDocument();
-    expect(theme.getByRole('heading', { level: 2, name: 'Appearance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Language' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Appearance' })).toBeInTheDocument();
     expect(language.getAllByRole('radio')).toHaveLength(6);
     expect(theme.getAllByRole('radio')).toHaveLength(3);
     expect(language.getByRole('radio', { name: 'English' })).toBeChecked();
     expect(theme.getByRole('radio', { name: 'System' })).toBeChecked();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('places the matching decorative SVG before every language name without changing radio labels', () => {
+    render(<Provider store={store}><Preferences /></Provider>);
+    const flags = { English: 'gb', Italiano: 'it', Français: 'fr', Deutsch: 'de', Español: 'es', Português: 'pt' };
+    for (const [name, country] of Object.entries(flags)) {
+      const radio = screen.getByRole('radio', { name });
+      const label = radio.closest('label')!;
+      const flag = label.querySelector('img')!;
+      const text = within(label).getByText(name);
+      const source = flag.getAttribute('src')!;
+      if (source.startsWith('data:image/svg+xml,'))
+        expect(decodeURIComponent(source)).toMatch(new RegExp(`id=['"]flag-icons-${country}['"]`));
+      else
+        expect(source).toMatch(new RegExp(`/${country}\\.svg(?:\\?|$)`));
+      expect(flag).toHaveAttribute('alt', '');
+      expect(flag).toHaveAttribute('aria-hidden', 'true');
+      expect(flag).toHaveStyle({ width: '24px', height: '18px' });
+      expect(flag.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('saves selections immediately and keeps exactly one checked option in each group', async () => {
