@@ -14,6 +14,7 @@ export default function AccountMenu({ name, loggingOut, logout }: AccountMenuPro
   const { t } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const open = anchor !== null;
+
   return <>
     <Button id="account-menu-button" title={name} aria-label={name} aria-haspopup="menu" aria-expanded={open}
       aria-controls={open ? 'account-menu' : undefined} endIcon={<ExpandMore />}
@@ -24,19 +25,29 @@ export default function AccountMenu({ name, loggingOut, logout }: AccountMenuPro
           '& .MuiButton-endIcon': { display: 'none' },
         },
       })}>
+
       <PersonOutline sx={{ display: { xs: 'inline-flex', sm: 'none' } }} />
+
       <Typography component="span" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>{name}</Typography>
     </Button>
-    <Menu id="account-menu" anchorEl={anchor} open={open} onClose={() => setAnchor(null)}
-      slotProps={{ list: { 'aria-labelledby': 'account-menu-button' } }}>
+
+    <Menu id="account-menu" 
+          anchorEl={anchor} 
+          anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+          open={open} 
+          onClose={() => setAnchor(null)}
+          slotProps={{ list: { 'aria-labelledby': 'account-menu-button' } }}>
+
       <MenuItem component={Link} to={SETTINGS_ROUTE} onClick={() => setAnchor(null)}>
         <ListItemIcon><SettingsOutlined fontSize="small" /></ListItemIcon>
         <ListItemText>{t('settings')}</ListItemText>
       </MenuItem>
+
       <MenuItem disabled={loggingOut} onClick={() => { setAnchor(null); logout(); }}>
         <ListItemIcon><Logout fontSize="small" /></ListItemIcon>
         <ListItemText>{t('logout')}</ListItemText>
       </MenuItem>
+      
     </Menu>
   </>;
 }
