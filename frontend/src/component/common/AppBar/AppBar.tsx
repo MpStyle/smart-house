@@ -21,7 +21,6 @@ export default function AppBar({ children, account, actionsRef, showBack = false
 
         <Box>
           <Typography sx={{ fontWeight: 700, letterSpacing: '-0.04em', fontSize: 22 }}>smart house</Typography>
-          <Typography variant="caption" color="text.secondary">{t('tagline')}</Typography>
         </Box>
       </Stack>
 
