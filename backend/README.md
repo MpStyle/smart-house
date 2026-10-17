@@ -52,7 +52,7 @@ The script builds the backend in Release, restores the pinned NSwag tool, regene
 
 ## Formatting and public methods
 
-The root `.editorconfig` requires braces and multiline control-flow blocks. Public methods have English XML documentation. The return-spacing helper complements `.editorconfig`, which cannot express a blank line before every `return`.
+The root `.editorconfig` requires braces and multiline control-flow blocks. Public methods and explicitly declared primary constructors have concise English XML documentation; exported model summaries also flow into OpenAPI and generated SDK documentation. The return-spacing helper complements `.editorconfig`, which cannot express a blank line before every `return`.
 
 ```bash
 dotnet format SmartHouse.sln --diagnostics IDE0011

@@ -11,14 +11,14 @@ test('back replaces the home icon and returns within the app after reload', asyn
   await expect(banner.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
   await page.getByRole('region', { name: 'Soggiorno' }).getByRole('link').filter({ hasText: 'Termostato' }).click();
   await expect(banner.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
-  await expect(banner.getByTestId('HomeOutlinedIcon')).toHaveCount(0);
+  await expect(banner.getByTestId('app-navigation').getByTestId('HomeOutlinedIcon')).toHaveCount(0);
   await expect(banner.getByTestId('ArrowBackIcon')).toBeVisible();
   await expect(banner.getByRole('button', { name: 'Refresh', exact: true })).toHaveCount(0);
   await expect(banner.getByRole('link', { name: /Back/ })).toHaveCount(0);
   await page.reload();
   await banner.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Soggiorno' })).toBeVisible();
-  await expect(banner.getByTestId('HomeOutlinedIcon')).toBeVisible();
+  await expect(banner.getByRole('combobox', { name: 'Home', exact: true }).getByTestId('HomeOutlinedIcon')).toBeVisible();
   await expect(banner.getByRole('button', { name: 'Back', exact: true })).toHaveCount(0);
   await expect(banner.getByRole('button', { name: 'Refresh', exact: true })).toBeVisible();
 });
@@ -44,7 +44,7 @@ test('direct history entry keeps back available during loading and failure, then
   await back.click();
   await expect(page).not.toHaveURL(/measurements/);
   await expect(page.getByRole('region', { name: 'Soggiorno' })).toBeVisible();
-  await expect(page.getByRole('banner').getByTestId('HomeOutlinedIcon')).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('combobox', { name: 'Home', exact: true }).getByTestId('HomeOutlinedIcon')).toBeVisible();
 });
 
 test('an entry from outside router navigation uses the dashboard instead of leaving the app', async ({ page }) => {

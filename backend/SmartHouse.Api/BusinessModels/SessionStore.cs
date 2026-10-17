@@ -6,6 +6,7 @@ using SmartHouse.Api.Repositories;
 
 namespace SmartHouse.Api.BusinessModels;
 
+/// <summary>Protects persistent session data and coordinates concurrent session operations.</summary>
 public sealed class SessionStore(SessionRepository repository, IDataProtectionProvider protection,
     TimeProvider clock, ILogger<SessionStore> logger)
 {

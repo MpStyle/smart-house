@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -19,6 +19,25 @@ function AppBarWithActions() {
 }
 
 describe('AppBar layout', () => {
+  it('hides downward, reveals upward or near the top, and reveals for keyboard focus', () => {
+    render(<MemoryRouter><AppBar account={<button>Account</button>} /></MemoryRouter>);
+    const banner = screen.getByRole('banner');
+    const scroll = (y: number) => {
+      vi.spyOn(window, 'scrollY', 'get').mockReturnValue(y);
+      fireEvent.scroll(window);
+    };
+    scroll(120);
+    expect(banner).toHaveAttribute('data-hidden', 'true');
+    scroll(100);
+    expect(banner).toHaveAttribute('data-hidden', 'false');
+    scroll(150);
+    expect(banner).toHaveAttribute('data-hidden', 'true');
+    act(() => screen.getByRole('button', { name: 'Account' }).focus());
+    expect(banner).toHaveAttribute('data-hidden', 'false');
+    scroll(200);
+    scroll(0);
+    expect(banner).toHaveAttribute('data-hidden', 'false');
+  });
   it('renders page actions before the account in the same group, after the other controls', () => {
     render(<MemoryRouter><AppBarWithActions /></MemoryRouter>);
     const home = screen.getByRole('button', { name: 'Home selector' });

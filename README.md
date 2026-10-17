@@ -2,6 +2,10 @@
 
 Read-only Netatmo dashboard: measurements by home and room, dedicated history, and Netatmo account sign-in. React/TypeScript, Redux Toolkit, MUI, and i18next frontend; ASP.NET Core 10 backend. Languages: Italian, English, French, German, Spanish, and Portuguese.
 
+![Smart House dashboard with simulated demo readings](docs/images/demo-dashboard.png)
+
+Explore a room's current readings and history, customize visibility and icons locally, and keep provider tokens on the server. See [architecture and login flow](docs/architecture.md) and [project folders](docs/project-structure.md).
+
 ## Local startup
 
 Prerequisites: up-to-date .NET SDK 10 and Node.js 20.14 or later (Node 22 recommended). Demo mode is **explicit**, uses simulated data, and cannot be enabled in production.
@@ -52,7 +56,9 @@ Sessions last an **absolute** seven days; token refresh does not extend them. Co
 - The **Rain** chart uses `sum_rain`: accumulation in each thirty-minute interval, not the instantaneous reading. Current 1/24-hour accumulations, absolute pressure, and daily extremes do not link to semantically different history.
 - History comes from Netatmo; no proprietary archive is built. Chart responses are cached only in memory for one minute.
 - Errors and partial results remain visible. A total provider failure is not shown as an account with no devices. Access to homes/measurements outside the session returns 404.
-- Language, theme, and last selected home persist in the browser; device data and tokens are not stored in `localStorage`. Hash routing supports direct history links on Storage static websites.
+- Language, theme, last selected home, dashboard order, visibility, and icons persist in the browser; device data and tokens are not stored in `localStorage`. These preferences are not synchronized across devices. Hash routing supports direct room/history links on Storage static websites.
+- Click a room name to see visible non-history readings first, followed by historical charts in your configured order. Individual measurement history links remain available. Settings keeps hidden entries editable; rooms without visible readings disappear from the dashboard.
+- Room and home icons can be built-in or local PNG/JPEG/WebP images (up to 2 MiB and 16 megapixels), re-encoded to at most 128 x 128 px and 64 KiB. Images never leave the browser. Storage errors keep previous preferences and show a visible message.
 
 ### Endpoints
 
@@ -143,4 +149,4 @@ npm run test:e2e
 
 Desktop/mobile scenarios cover sign-in, duplicate measurements, charts, language changes, logout, no polling, and expiration while the page remains open.
 
-Below 600 px, cards use two columns: device names and sample timestamps are hidden, while room headings, stale state, and update failures remain visible. The dashboard app bar contains **Refresh**; history replaces the home icon with a **Back** arrow, including during loading/errors. The arrow returns to the previous internal page or the dashboard for a direct history link, without leaving the app. The range selector remains beside the chart.
+Below 600 px, cards use two columns: device names and sample timestamps are hidden, while room headings, stale state, and update failures remain visible. The one-line app bar hides on downward scrolling and reappears on upward scrolling. The dashboard contains **Refresh**; room/history/settings pages keep **Back** available even on mobile, including during loading/errors. The arrow returns to the previous internal page or the dashboard for a direct link, without leaving the app. Room charts share a range selector; individual history keeps its own.

@@ -4,6 +4,7 @@ using SmartHouse.Api.Entities;
 
 namespace SmartHouse.Api.BusinessModels;
 
+/// <summary>Coordinates authorized discovery, measurements, and history with session-scoped caching.</summary>
 public sealed class DashboardService(INetatmoClient client, SessionStore store, TimeProvider clock,
     IMemoryCache memory, ILogger<DashboardService> logger)
 {

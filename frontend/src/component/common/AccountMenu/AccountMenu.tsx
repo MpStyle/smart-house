@@ -20,15 +20,15 @@ export default function AccountMenu({ name, loggingOut, logout }: AccountMenuPro
       aria-controls={open ? 'account-menu' : undefined} endIcon={<ExpandMore />}
       onClick={event => setAnchor(event.currentTarget)} sx={theme => ({
         maxWidth: '100%', minWidth: 0,
-        [theme.breakpoints.down('sm')]: {
+        [theme.breakpoints.down('md')]: {
           width: 44, height: 44, p: 1,
           '& .MuiButton-endIcon': { display: 'none' },
         },
       })}>
 
-      <PersonOutline sx={{ display: { xs: 'inline-flex', sm: 'none' } }} />
+      <PersonOutline sx={{ display: { xs: 'inline-flex', md: 'none' } }} />
 
-      <Typography component="span" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>{name}</Typography>
+      <Typography component="span" noWrap sx={{ display: { xs: 'none', md: 'block' } }}>{name}</Typography>
     </Button>
 
     <Menu id="account-menu" 
@@ -38,6 +38,9 @@ export default function AccountMenu({ name, loggingOut, logout }: AccountMenuPro
           onClose={() => setAnchor(null)}
           slotProps={{ list: { 'aria-labelledby': 'account-menu-button' } }}>
 
+      <MenuItem disabled sx={{ display: { xs: 'flex', md: 'none' }, opacity: '1 !important', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
+        <ListItemText>{name}</ListItemText>
+      </MenuItem>
       <MenuItem component={Link} to={SETTINGS_ROUTE} onClick={() => setAnchor(null)}>
         <ListItemIcon><SettingsOutlined fontSize="small" /></ListItemIcon>
         <ListItemText>{t('settings')}</ListItemText>

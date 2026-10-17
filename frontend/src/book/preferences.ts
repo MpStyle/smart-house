@@ -4,6 +4,8 @@ import { languages, type Language } from '../entity/Language';
 import type { PreferencesState } from '../entity/PreferencesState';
 import type { ThemePreference } from '../entity/ThemePreference';
 import { parseDashboardOrders } from './dashboardOrder';
+import { parseCustomizations } from './dashboardCustomization';
+import type { DashboardCustomizations } from '../entity/DashboardCustomization';
 export function readPreference(key: string): string | null {
   try { return localStorage.getItem(`smart-house.${key}`); }
   catch (error) { console.warn('Browser preferences are unavailable.', error); return null; }
@@ -31,6 +33,7 @@ const initialState: PreferencesState = {
   homeId: readPreference('home') ?? '',
   expired: false,
   dashboardOrders: parseDashboardOrders(readPreference('dashboardOrders')),
+  dashboardCustomizations: parseCustomizations(readPreference('dashboardCustomizations')),
 };
 export const preferences = createSlice({
   name: 'preferences',
@@ -40,6 +43,7 @@ export const preferences = createSlice({
     setTheme(state, action: PayloadAction<ThemePreference>) { state.theme = action.payload; },
     setHome(state, action: PayloadAction<string>) { state.homeId = action.payload; },
     setExpired(state, action: PayloadAction<boolean>) { state.expired = action.payload; },
+    setCustomizations(state, action: PayloadAction<DashboardCustomizations>) { state.dashboardCustomizations = action.payload; },
     setRoomOrder(state, action: PayloadAction<{ homeId: string; ids: string[] }>) {
       const { homeId, ids } = action.payload;
       state.dashboardOrders[homeId] ??= { roomIds: [], measurementIds: {} };

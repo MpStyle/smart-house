@@ -31,12 +31,12 @@ test('account stays at the right edge with actions immediately to its left, incl
   const banner = page.getByRole('banner');
   const refresh = banner.getByRole('button', { name: 'Refresh', exact: true });
   await expect(refresh).toBeVisible();
-  for (const width of [1280, 600, 599, 390, 320]) {
+  for (const width of [1280, 900, 768, 700, 600, 599, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
     const account = banner.getByRole('button', { name: accountName, exact: true });
     await expect(account).toHaveAttribute('title', accountName);
     await expectRightAlignment(page, account, refresh);
-    if (width < 600) {
+    if (width < 900) {
       await expect(account.getByTestId('PersonOutlineIcon')).toBeVisible();
       await expect(account.locator('.MuiTypography-root')).toBeHidden();
       await expect(account.getByTestId('ExpandMoreIcon')).toBeHidden();
@@ -61,6 +61,9 @@ test('account stays at the right edge with actions immediately to its left, incl
   await expect(page.getByRole('menuitem', { name: 'Sign out', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 600, height: 850 });
+  await expect(account.locator('.MuiTypography-root')).toBeHidden();
+  await expectRightAlignment(page, account, refresh);
+  await page.setViewportSize({ width: 1280, height: 850 });
   await expect(account.locator('.MuiTypography-root')).toBeVisible();
   await expectRightAlignment(page, account, refresh);
   expect(await account.locator('.MuiTypography-root').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);

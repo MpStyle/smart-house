@@ -176,5 +176,5 @@ test('real accounts display provider identity and retain access to the menu duri
   await page.keyboard.press('Escape');
   await page.getByRole('banner').getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/#\/$/);
-  await expect(page.getByRole('banner').getByTestId('HomeOutlinedIcon')).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('combobox', { name: 'Home', exact: true }).getByTestId('HomeOutlinedIcon')).toBeVisible();
 });

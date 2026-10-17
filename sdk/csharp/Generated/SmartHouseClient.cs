@@ -975,6 +975,9 @@ namespace SmartHouse.Sdk
         }
     }
 
+    /// <summary>
+    /// Exposes a safe, machine-readable API failure code.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ApiError
     {
@@ -994,6 +997,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Reports process readiness.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class HealthResponse
     {
@@ -1013,6 +1019,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Contains a measurement's history within explicit bounds and units.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class History
     {
@@ -1048,6 +1057,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Represents a timestamped history sample, including a possible gap.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class HistoryPoint
     {
@@ -1070,6 +1082,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Describes an authorized home without internal provider identifiers.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class HomeResponse
     {
@@ -1097,6 +1112,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Lists authorized homes, discovery warnings, and the account display identity.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class HomesResponse
     {
@@ -1123,6 +1141,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Returns a reading's value, units, provenance, and availability without internal history sources.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class MeasurementResponse
     {
@@ -1189,6 +1210,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Groups API readings by room.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class RoomResponse
     {
@@ -1216,6 +1240,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Reports browser session state without exposing provider credentials.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SessionResponse
     {
@@ -1250,6 +1277,9 @@ namespace SmartHouse.Sdk
 
     }
 
+    /// <summary>
+    /// Returns a home's timestamped readings and update warnings.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SnapshotResponse
     {

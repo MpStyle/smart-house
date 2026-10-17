@@ -346,7 +346,8 @@
           "code": {
             "type": "string"
           }
-        }
+        },
+        "description": "Exposes a safe, machine-readable API failure code."
       },
       "HealthResponse": {
         "required": [
@@ -357,7 +358,8 @@
           "status": {
             "type": "string"
           }
-        }
+        },
+        "description": "Reports process readiness."
       },
       "History": {
         "required": [
@@ -389,7 +391,8 @@
               "$ref": "#/components/schemas/HistoryPoint"
             }
           }
-        }
+        },
+        "description": "Contains a measurement's history within explicit bounds and units."
       },
       "HistoryPoint": {
         "required": [
@@ -407,7 +410,8 @@
             "format": "double",
             "nullable": true
           }
-        }
+        },
+        "description": "Represents a timestamped history sample, including a possible gap."
       },
       "HomeResponse": {
         "required": [
@@ -426,7 +430,8 @@
           "timezone": {
             "type": "string"
           }
-        }
+        },
+        "description": "Describes an authorized home without internal provider identifiers."
       },
       "HomesResponse": {
         "required": [
@@ -452,7 +457,8 @@
             "type": "string",
             "nullable": true
           }
-        }
+        },
+        "description": "Lists authorized homes, discovery warnings, and the account display identity."
       },
       "MeasurementResponse": {
         "required": [
@@ -505,7 +511,8 @@
             "format": "int32",
             "nullable": true
           }
-        }
+        },
+        "description": "Returns a reading's value, units, provenance, and availability without internal history sources."
       },
       "MeasurementStatus": {
         "enum": [
@@ -535,7 +542,8 @@
               "$ref": "#/components/schemas/MeasurementResponse"
             }
           }
-        }
+        },
+        "description": "Groups API readings by room."
       },
       "SessionResponse": {
         "required": [
@@ -568,7 +576,8 @@
             "format": "date-time",
             "nullable": true
           }
-        }
+        },
+        "description": "Reports browser session state without exposing provider credentials."
       },
       "SnapshotResponse": {
         "required": [
@@ -602,7 +611,8 @@
               "type": "string"
             }
           }
-        }
+        },
+        "description": "Returns a home's timestamped readings and update warnings."
       }
     }
   },

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Navigate, Route, Routes, useMatch, useParams } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createHistoryRoute, DASHBOARD_ROUTE, FALLBACK_ROUTE, HISTORY_ROUTE, SETTINGS_ROUTE } from '../book/routes';
+import { createHistoryRoute, createRoomRoute, DASHBOARD_ROUTE, FALLBACK_ROUTE, HISTORY_ROUTE, ROOM_ROUTE, SETTINGS_ROUTE } from '../book/routes';
 import MeasurementCard from '../component/page/Dashboard/MeasurementCard';
 import type { Measurement } from '../entity/Measurement';
 
@@ -13,7 +13,21 @@ function HistoryParameters() {
   return <output data-testid="history-parameters">{JSON.stringify({ params, matched: match !== null })}</output>;
 }
 
+function RoomParameters() {
+  return <output data-testid="room-parameters">{JSON.stringify(useParams())}</output>;
+}
+
 describe('frontend routes', () => {
+  it('encodes room and home IDs without changing existing history routes', () => {
+    const homeId = 'home /?#%';
+    const roomId = 'room:/? è';
+    const path = createRoomRoute(homeId, roomId);
+    expect(path).toBe(`/homes/${encodeURIComponent(homeId)}/rooms/${encodeURIComponent(roomId)}`);
+    render(<MemoryRouter initialEntries={[path]}>
+      <Routes><Route path={ROOM_ROUTE} element={<RoomParameters />} /></Routes>
+    </MemoryRouter>);
+    expect(screen.getByTestId('room-parameters')).toHaveTextContent(JSON.stringify({ homeId, roomId }));
+  });
   it('preserves the existing dashboard, history and catch-all paths', () => {
     expect(DASHBOARD_ROUTE).toBe('/');
     expect(HISTORY_ROUTE).toBe('/homes/:homeId/measurements/:measurementId');

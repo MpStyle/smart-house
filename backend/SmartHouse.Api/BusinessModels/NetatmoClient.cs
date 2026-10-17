@@ -6,6 +6,7 @@ using SmartHouse.Api.Entities;
 
 namespace SmartHouse.Api.BusinessModels;
 
+/// <summary>Calls Netatmo using encrypted server-side credentials and coalesced token refreshes.</summary>
 public sealed class NetatmoClient(HttpClient http, SessionStore store, IConfiguration config,
     TimeProvider clock, ILogger<NetatmoClient> logger) : INetatmoClient
 {

@@ -406,18 +406,21 @@ export class SmartHouseClient {
     }
 }
 
+/** Exposes a safe, machine-readable API failure code. */
 export interface ApiError {
     code: string;
 
     [key: string]: any;
 }
 
+/** Reports process readiness. */
 export interface HealthResponse {
     status: string;
 
     [key: string]: any;
 }
 
+/** Contains a measurement's history within explicit bounds and units. */
 export interface History {
     measurementId: string;
     unit: string;
@@ -428,6 +431,7 @@ export interface History {
     [key: string]: any;
 }
 
+/** Represents a timestamped history sample, including a possible gap. */
 export interface HistoryPoint {
     time: string;
     value: number | null;
@@ -435,6 +439,7 @@ export interface HistoryPoint {
     [key: string]: any;
 }
 
+/** Describes an authorized home without internal provider identifiers. */
 export interface HomeResponse {
     id: string;
     name: string;
@@ -443,6 +448,7 @@ export interface HomeResponse {
     [key: string]: any;
 }
 
+/** Lists authorized homes, discovery warnings, and the account display identity. */
 export interface HomesResponse {
     homes: HomeResponse[];
     warnings: string[];
@@ -451,6 +457,7 @@ export interface HomesResponse {
     [key: string]: any;
 }
 
+/** Returns a reading's value, units, provenance, and availability without internal history sources. */
 export interface MeasurementResponse {
     id: string;
     kind: string;
@@ -472,6 +479,7 @@ export enum MeasurementStatus {
     Unavailable = "unavailable",
 }
 
+/** Groups API readings by room. */
 export interface RoomResponse {
     id: string;
     name: string;
@@ -480,6 +488,7 @@ export interface RoomResponse {
     [key: string]: any;
 }
 
+/** Reports browser session state without exposing provider credentials. */
 export interface SessionResponse {
     authenticated: boolean;
     csrfToken: string;
@@ -491,6 +500,7 @@ export interface SessionResponse {
     [key: string]: any;
 }
 
+/** Returns a home's timestamped readings and update warnings. */
 export interface SnapshotResponse {
     homeId: string;
     timezone: string;
