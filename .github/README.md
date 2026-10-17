@@ -2,6 +2,35 @@
 
 The project separates CI and deployment for **frontend**, **backend**, and **infrastructure**. Automatic deployment runs on `main`, without manual approval, only after successful CI for **the same commit**. CI does not require Azure credentials.
 
+## Copilot TODO workflow
+
+Explicitly invoke `/mp-smart-home-workflow` to process unchecked entries in root
+`TODO.md` using the [project skill](skills/mp-smart-home-workflow/SKILL.md).
+Creating or discussing the skill does not run it. With no open entries it does
+nothing.
+
+Each entry gets an English GIVEN / WHEN / THEN issue, an
+`issue-<number>-<english-slug>` branch and a mandatory `grill-me` interview with
+your confirmation before implementation. Install the personal `grill-me` and
+`grilling` skills first; they are not bundled with this project.
+
+The invocation authorizes sequential implementation, commits referencing the
+issue, push to origin, PR creation and automatic merge only after successful
+local verification and GitHub checks, with repository protections respected.
+Unit tests must pass before every commit and push. Missing test infrastructure
+or non-applicable tests require your explicit decision; missing GitHub checks
+block automatic merge. Failures stop the sequence. The PR includes the TODO
+checkbox update and issue link, and closes the issue on merge. Existing linked
+work is reused; a dirty or diverged checkout is never cleaned automatically.
+
+Reload project skills in Copilot CLI with `/skills reload`, then invoke
+`/mp-smart-home-workflow`. Explicit-only metadata is enabled; some Copilot
+CLI/app versions have a known [manual invocation compatibility issue](https://github.com/github/copilot-cli/issues/4438).
+If affected, use a compatible host/version rather than removing the
+explicit-only restriction. This is an agent instruction workflow, not an
+unattended GitHub Actions job; it requires an interactive host, GitHub
+permissions and available tools.
+
 ## Workflows and triggers
 
 | Workflow | Trigger | Responsibility |
