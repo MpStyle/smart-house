@@ -166,7 +166,7 @@ resource apiGroup 'Microsoft.Cdn/profiles/originGroups@2024-09-01' = {
   name: 'api'
   properties: {
     loadBalancingSettings: { sampleSize: 4, successfulSamplesRequired: 3, additionalLatencyInMilliseconds: 50 }
-    healthProbeSettings: { probePath: '/api/health', probeProtocol: 'Https', probeRequestType: 'GET', probeIntervalInSeconds: 120 }
+    healthProbeSettings: { probePath: '/api/v1/health', probeProtocol: 'Https', probeRequestType: 'GET', probeIntervalInSeconds: 120 }
   }
 }
 resource apiOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-09-01' = {
@@ -280,4 +280,4 @@ output keyVaultName string = vault.name
 output frontDoorProfile string = profile.name
 output frontDoorEndpoint string = endpoint.name
 output publicUrl string = 'https://${endpoint.properties.hostName}'
-output netatmoCallback string = 'https://${endpoint.properties.hostName}/api/auth/callback'
+output netatmoCallback string = 'https://${endpoint.properties.hostName}/api/v1/auth/callback'

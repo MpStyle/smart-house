@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHouse.Api.Tests", "bac
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFolder", "SolutionFolder", "{87CF25B6-808C-40D7-9631-4BAE89E2A62D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sdk", "sdk", "{FF13A09E-0E72-1904-124B-A4E979EF28D3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartHouse.Sdk", "sdk\csharp\SmartHouse.Sdk.csproj", "{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +49,18 @@ Global
 		{8A342FC0-741C-4F59-A9C6-4D582DC83916}.Release|x64.Build.0 = Release|Any CPU
 		{8A342FC0-741C-4F59-A9C6-4D582DC83916}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A342FC0-741C-4F59-A9C6-4D582DC83916}.Release|x86.Build.0 = Release|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Debug|x64.Build.0 = Debug|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Debug|x86.Build.0 = Debug|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Release|x64.ActiveCfg = Release|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Release|x64.Build.0 = Release|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Release|x86.ActiveCfg = Release|Any CPU
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,5 +68,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{01843CF4-06F8-42D6-A84B-A2628C15FB59} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{8A342FC0-741C-4F59-A9C6-4D582DC83916} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{E9461E4C-5CE7-4E4A-9B12-5E85E59854A8} = {FF13A09E-0E72-1904-124B-A4E979EF28D3}
 	EndGlobalSection
 EndGlobal

@@ -42,7 +42,7 @@ describe('frontend routes', () => {
     const measurement: Measurement = {
       id: 'device:Temperature', kind: 'temperature', deviceName: 'Thermostat',
       value: 21, unit: '°C', measuredAt: new Date(now).toISOString(),
-      hasHistory: true, updateFailed: false, status: 'fresh',
+      hasHistory: true, updateFailed: false, status: 'fresh', sampleMinutes: null,
     };
     render(<MemoryRouter><MeasurementCard home={home} measurement={measurement} now={now} /></MemoryRouter>);
     expect(screen.getByRole('link')).toHaveAttribute('href', createHistoryRoute(home.id, measurement.id));

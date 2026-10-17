@@ -5,6 +5,7 @@ namespace SmartHouse.Api.BusinessModels;
 
 public static class DemoData
 {
+    /// <summary>Returns deterministic simulated provider data without contacting Netatmo.</summary>
     public static JsonElement Get(string endpoint, Dictionary<string, string?>? query, DateTimeOffset now)
     {
         var timestamp = now.AddMinutes(-5).ToUnixTimeSeconds();
@@ -18,7 +19,12 @@ public static class DemoData
                     rooms = new[] { new { id = "room-living", name = "Soggiorno", module_ids = new[] { "thermostat" } } },
                     modules = new[] { new { id = "thermostat", type = "NATherm1", name = "Termostato", room_id = "room-living" } }
                 } },
-                user = new { unit_system = 0, unit_pressure = 0, unit_wind = 0 }
+                user = new
+                {
+                    unit_system = 0,
+                    unit_pressure = 0,
+                    unit_wind = 0
+                }
             },
             "homestatus" => new { home = new { rooms = new[] { new { id = "room-living", reachable = true, therm_measured_temperature = 21.4 } } } },
             "getstationsdata" => new
@@ -46,11 +52,20 @@ public static class DemoData
                             dashboard_data = new { time_utc = timestamp, WindStrength = 12.4, WindAngle = 245, GustStrength = 19.8, GustAngle = 250 } }
                     }
                 } },
-                user = new { administrative = new { unit = 0, windunit = 0, pressureunit = 0 } }
+                user = new
+                {
+                    administrative = new
+                    {
+                        unit = 0,
+                        windunit = 0,
+                        pressureunit = 0
+                    }
+                }
             },
             "getroommeasure" or "getmeasure" => History(query, now),
             _ => throw new ProviderException("demo_endpoint_not_supported")
         };
+
         return JsonSerializer.SerializeToElement(data);
     }
 
@@ -59,13 +74,26 @@ public static class DemoData
         var from = long.Parse(query!["date_begin"]!, System.Globalization.CultureInfo.InvariantCulture);
         var to = long.Parse(query["date_end"]!, System.Globalization.CultureInfo.InvariantCulture);
         var kind = query["type"];
-        var baseline = kind switch { "co2" => 700d, "humidity" => 50, "pressure" => 1016, "noise" => 38, "sum_rain" => 0.2,
-            "windstrength" => 12, "guststrength" => 18, "windangle" or "gustangle" => 245, _ => 21 };
+        var baseline = kind switch
+        {
+            "co2" => 700d,
+            "humidity" => 50,
+            "pressure" => 1016,
+            "noise" => 38,
+            "sum_rain" => 0.2,
+            "windstrength" => 12,
+            "guststrength" => 18,
+            "windangle" or "gustangle" => 245,
+            _ => 21
+        };
         var result = new Dictionary<string, double?[]>();
         var last = Math.Min(to, now.AddMinutes(-5).ToUnixTimeSeconds());
         var first = from + (last - from) % 1800;
         for (var time = first; time <= last; time += 1800)
+        {
             result[time.ToString(System.Globalization.CultureInfo.InvariantCulture)] = [baseline + Math.Sin(time / 7200d) * baseline * 0.04];
+        }
+
         return result;
     }
 }

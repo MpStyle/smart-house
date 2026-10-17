@@ -1,12 +1,12 @@
 # Smart House
 
-Dashboard Netatmo in sola lettura: misurazioni per casa e stanza, storico dedicato e accesso tramite account Netatmo. Frontend React/TypeScript, Redux Toolkit, MUI e i18next; backend ASP.NET Core 10. Lingue: italiano, inglese, francese, tedesco, spagnolo e portoghese.
+Read-only Netatmo dashboard: measurements by home and room, dedicated history, and Netatmo account sign-in. React/TypeScript, Redux Toolkit, MUI, and i18next frontend; ASP.NET Core 10 backend. Languages: Italian, English, French, German, Spanish, and Portuguese.
 
-## Avvio locale
+## Local startup
 
-Prerequisiti: .NET SDK 10 aggiornato e Node.js 20.14 o successivo (Node 22 consigliato). La modalità demo è **esplicita**, usa dati simulati e non può essere abilitata in produzione.
+Prerequisites: up-to-date .NET SDK 10 and Node.js 20.14 or later (Node 22 recommended). Demo mode is **explicit**, uses simulated data, and cannot be enabled in production.
 
-Da due terminali, nella radice del progetto:
+From two terminals at the repository root:
 
 ```bash
 dotnet build backend/SmartHouse.Api
@@ -21,110 +21,119 @@ npm ci
 npm run dev
 ```
 
-Aprire <http://localhost:5173> e selezionare **Esplora la demo**. Anche la demo richiede una sessione: non mostra dati prima dell'accesso. Include un termostato, una stazione con moduli meteo, valori scaduti e grafici. In questa modalità nessuna chiamata viene inviata a Netatmo.
+Open <http://localhost:5173> and select **Explore the demo**. Demo mode also requires a session: no data appears before sign-in. It includes a thermostat, a station with weather modules, stale readings, and charts. No requests are sent to Netatmo in this mode.
 
-### Collegamento a dispositivi reali
+### Connecting real devices
 
-1. Registrare un'app dedicata su [Netatmo Connect](https://dev.netatmo.com/apps), abilitando esclusivamente `read_station` e `read_thermostat`. Verificare che l'app possa autorizzare utenti esterni prima di pubblicizzare la beta.
-2. Configurare come redirect URI locale `http://localhost:5173/api/auth/callback`, se consentito dal portale Netatmo. Se è richiesto HTTPS, usare un origin locale HTTPS attendibile e aggiornare `PublicOrigin` e il proxy Vite di conseguenza.
-3. Inserire i segreti **nel terminale locale**, mai in chat, nel frontend o nel repository:
+1. Register a dedicated app on [Netatmo Connect](https://dev.netatmo.com/apps), enabling only `read_station` and `read_thermostat`. Verify that the app can authorize external users before advertising the beta.
+2. Set the local redirect URI to `http://localhost:5173/api/v1/auth/callback`, if the Netatmo portal allows it. If HTTPS is required, use a trusted local HTTPS origin and update `PublicOrigin` and the Vite proxy accordingly.
+3. Enter secrets **in your local terminal**, never in chat, the frontend, or the repository:
 
 ```bash
 dotnet user-secrets set 'Netatmo:ClientId' '<client-id>' --project backend/SmartHouse.Api
 dotnet user-secrets set 'Netatmo:ClientSecret' '<client-secret>' --project backend/SmartHouse.Api
 ```
 
-4. Riavviare il backend con `ASPNETCORE_ENVIRONMENT=Development`, senza `DemoMode=true`, e usare **Accedi con Netatmo**. Il proxy Vite mantiene frontend, callback OAuth e API sullo stesso origin. Le credenziali mancanti disabilitano il pulsante; non attivano automaticamente la demo.
+4. Restart with `ASPNETCORE_ENVIRONMENT=Development`, without `DemoMode=true`, and choose **Sign in with Netatmo**. The Vite proxy keeps frontend, OAuth callback, and APIs on one origin. Missing credentials disable the button; they do not enable demo mode automatically.
 
-Le sessioni durano sette giorni **assoluti**, senza rinnovo della durata al refresh. I cookie contengono solo l'identificatore opaco della sessione; access e refresh token rimangono cifrati sul backend. Il logout elimina sessione e cache. I dati locali sono in `backend/SmartHouse.Api/.local/` (oppure nel percorso `DataDirectory` configurato).
+Sessions last an **absolute** seven days; token refresh does not extend them. Cookies contain only an opaque session identifier; access and refresh tokens remain encrypted on the backend. Logout deletes the session and cache. Local data lives in `backend/SmartHouse.Api/.local/`, or the configured `DataDirectory`.
 
-## Comportamento dei dati
+## Data behavior
 
-- Termostato Intelligente classico `NATherm1` con relè; Weather Station, modulo esterno, moduli interni aggiuntivi, pluviometro e anemometro.
-- Associazione Weather Station alla casa tramite il suo `home_id` esplicito. In sua assenza la stazione è una **casa separata**, anche se il nome coincide con quello di un'altra casa. Non si deducono associazioni da nomi o posizione.
-- Nella stessa casa i nomi delle stanze/moduli coincidono ignorando maiuscole e spazi alle estremità. Ogni misura mantiene la propria provenienza; due temperature non vengono mediate.
-- Vengono mostrati i valori numerici ambientali documentati: temperatura, umidità, CO₂, rumore, pressione/pressione assoluta, minime/massime giornaliere, pioggia e accumuli, vento e raffiche con relative direzioni. Nessun comando, setpoint, batteria o stato del riscaldamento.
-- `homestatus` non documenta un timestamp della temperatura istantanea del termostato. La dashboard cerca **l'ultimo campione a risoluzione di 30 minuti da `getroommeasure`, nelle ultime 48 ore**, senza richiedere l'apertura del grafico. Non è spacciato per una lettura istantanea. L'API fornisce uno storico della stanza; questa versione supporta il classico termostato della stanza, non attribuisce temperature aggregate a più termostati distinti.
-- Per tutte le misure, un campione valido entro 30 minuti è fresco; oltre 30 minuti e fino a 48 ore rimane visibile con **Dato scaduto**. Oltre 48 ore, senza valore o senza timestamp valido è **Non disponibile**. Le soglie sono verificate anche sul client mentre la pagina resta aperta o torna visibile, senza richieste di rete.
-- Se un aggiornamento fallisce o il dispositivo è irraggiungibile, l'ultimo valore noto entro 48 ore rimane visibile con **Aggiornamento non riuscito**, senza apparire fresco. Per i sensori meteo si usano risposta corrente e cache, senza richieste di storico aggiuntive; per il termostato si usa lo storico della stanza. Gli errori restano visibili e le autorizzazioni revocate non attivano questo ripiego. I valori mantengono il timestamp originale: non viene creato un archivio di misurazioni.
-- Recupero all'apertura e manuale; nessun polling. La cache backend per sessione/casa dura un minuto e sopravvive al riavvio. Richieste concorrenti vengono accorpate. La topologia e la risposta meteo vengono condivise tra le case della stessa sessione per ridurre le chiamate. Un tentativo fallito di discovery viene ugualmente limitato per un minuto.
-- Grafici: 6 ore iniziali, 6/12/24/48 ore, risoluzione 30 minuti, timestamp reali e fuso della casa. I buchi non vengono interpolati. Le unità vengono convertite nello stesso modo per valori e storico, usando le preferenze Netatmo e ripiego metrico.
-- Il grafico **Pioggia** usa `sum_rain`, cioè l'accumulo in ciascun intervallo di 30 minuti, non la lettura istantanea. Accumuli correnti di 1/24 ore, pressione assoluta ed estremi giornalieri non hanno collegamenti a uno storico diverso dalla loro semantica.
-- Lo storico si recupera da Netatmo; non si costruisce un archivio proprietario. Le risposte dei grafici sono conservate solo in memoria per un minuto.
-- Errori e risultati parziali sono visibili. Un guasto totale del provider non è presentato come un account senza dispositivi. Accessi a case e misure non appartenenti alla sessione restituiscono 404.
-- Preferenze di lingua, tema e ultima casa vengono salvate nel browser; nessun dato di dispositivi o token è salvato in `localStorage`. Routing con hash per aprire direttamente le pagine dello storico su Storage static website.
+- Classic `NATherm1` Smart Thermostat with relay; Weather Station, outdoor module, extra indoor modules, rain gauge, and wind gauge.
+- Weather Stations are associated with homes through their explicit `home_id`. Without it, the station is a **separate home**, even if another home has the same name. Names or location never imply an association.
+- Within a home, room/module names match ignoring case and edge whitespace. Each measurement keeps its provenance; two temperatures are not averaged.
+- Documented numeric environmental readings are shown: temperature, humidity, CO2, noise, pressure/absolute pressure, daily minimum/maximum, rain and accumulations, wind/gusts and directions. No commands, setpoints, battery readings, or heating state.
+- `homestatus` does not document a timestamp for instantaneous thermostat temperature. The dashboard retrieves **the last thirty-minute sample from `getroommeasure` within the last 48 hours**, without requiring the chart to open. It is not presented as an instantaneous reading. The API supplies room history; this version supports the classic room thermostat and does not attribute aggregated temperatures to multiple distinct thermostats.
+- A valid sample within 30 minutes is fresh; older samples up to 48 hours remain visible as **Stale data**. Beyond 48 hours, or without a valid value/timestamp, the reading is **Unavailable**. The client also checks thresholds while the page remains open or returns to visibility, without network requests.
+- When an update fails or a device is unreachable, its last known value within 48 hours remains visible with **Update failed**, without appearing fresh. Weather sensors use current responses and cache without extra history requests; thermostats use room history. Errors remain visible and revoked permissions do not trigger this fallback. Values keep their original timestamp: no measurement archive is created.
+- Fetch on opening and manual refresh; no polling. Backend cache per session/home lasts one minute and survives restarts. Concurrent requests are coalesced. Topology and weather responses are shared between homes of the same session to reduce calls. Failed discovery attempts are also throttled for one minute.
+- Charts start at 6 hours, with 6/12/24/48-hour ranges, thirty-minute resolution, actual timestamps, and the home's timezone. Gaps are not interpolated. Current values and history use the same conversions, based on Netatmo preferences with metric fallback.
+- The **Rain** chart uses `sum_rain`: accumulation in each thirty-minute interval, not the instantaneous reading. Current 1/24-hour accumulations, absolute pressure, and daily extremes do not link to semantically different history.
+- History comes from Netatmo; no proprietary archive is built. Chart responses are cached only in memory for one minute.
+- Errors and partial results remain visible. A total provider failure is not shown as an account with no devices. Access to homes/measurements outside the session returns 404.
+- Language, theme, and last selected home persist in the browser; device data and tokens are not stored in `localStorage`. Hash routing supports direct history links on Storage static websites.
 
-### Endpoint
+### Endpoints
 
-| Endpoint | Uso |
+All APIs use `/api/v1`. Unversioned `/api/...` URLs are no longer supported; update external clients and Netatmo callback registrations when deploying this change.
+
+| Endpoint | Purpose |
 | --- | --- |
-| `GET /api/auth/session` | Stato di accesso e token anti-CSRF; nessun token Netatmo |
-| `GET /api/auth/login` | Avvio OAuth Netatmo |
-| `GET /api/auth/callback` | Callback gestita dal middleware OAuth, con controllo dello state |
-| `POST /api/auth/logout` | Logout, con header `X-CSRF-TOKEN` |
-| `POST /api/auth/demo` | Accesso demo, solo in Development e con anti-CSRF |
-| `GET /api/homes/` | Case autorizzate |
-| `GET /api/homes/{homeId}/measurements` | Stanze e misure della casa |
-| `GET /api/homes/{homeId}/history/{measurementId}?hours=6` | Storico 6/12/24/48 ore |
-| `GET /api/health` | Readiness del processo |
+| `GET /api/v1/auth/session` | Session state and antiforgery token; no Netatmo tokens |
+| `GET /api/v1/auth/login` | Starts browser Netatmo OAuth |
+| `GET /api/v1/auth/callback` | OAuth middleware callback with state validation |
+| `POST /api/v1/auth/logout` | Logout, with `X-CSRF-TOKEN` header |
+| `POST /api/v1/auth/demo` | Development demo sign-in with antiforgery; 404 when disabled |
+| `GET /api/v1/homes` | Authorized homes |
+| `GET /api/v1/homes/{homeId}/measurements` | Home rooms and measurements |
+| `GET /api/v1/homes/{homeId}/history/{measurementId}?hours=6` | 6/12/24/48-hour history |
+| `GET /api/v1/health` | Process readiness |
+
+### OpenAPI and SDKs
+
+Backend builds update [`openapi/smart-house.json`](openapi/smart-house.json). After API changes, run `node scripts/generate-api.mjs` with frontend dependencies installed to regenerate the C# SDK (`SmartHouse.Sdk`, .NET 8+), independent Fetch SDK (`@mpstyle/smart-house-sdk`), and frontend RTK Query client. Contract and generated sources are versioned; CI rejects drift.
+
+SDKs publish to GitHub Packages only through an explicit `sdk-vX.Y.Z` tag on a commit belonging to `main`. See [SDK setup and releases](sdk/README.md), [backend formatting/export](backend/README.md), and [frontend code generation](frontend/README.md#generated-api-client).
 
 ## Azure
 
-Configurazione e pipeline per sezione: [GitHub Actions](.github/README.md), [frontend](frontend/README.md), [backend](backend/README.md), [infrastruttura](infra/README.md). Il README frontend include la configurazione della porta del backend locale.
+Configuration and section-specific pipelines: [GitHub Actions](.github/README.md), [frontend](frontend/README.md), [backend](backend/README.md), and [infrastructure](infra/README.md). The frontend README covers local backend port configuration.
 
-`infra/main.bicep` crea risorse in un gruppo dedicato:
+`infra/main.bicep` creates resources in a dedicated resource group:
 
-- App Service Linux **B1, una sola istanza**, .NET 10, in West Europe;
-- Storage Account LRS per il frontend statico;
-- Front Door Standard, HTTPS sul dominio Azure, routing `/api/*` al backend e `/*` al frontend; **cache disabilitata sulle API**;
-- Storage privato e Key Vault per le chiavi persistenti ASP.NET Data Protection; managed identity e RBAC per il backend;
-- Key Vault per le credenziali Netatmo, tramite riferimenti App Service;
-- avvisi di budget opzionali a 80% del costo effettivo e 100% del costo previsto.
+- Linux App Service **B1, single instance**, .NET 10, in West Europe;
+- LRS Storage Account for the static frontend;
+- Front Door Standard, HTTPS on the Azure domain, routing `/api/*` to the backend and `/*` to the frontend; **API caching disabled**;
+- private Storage and Key Vault for persistent ASP.NET Data Protection keys; managed identity and RBAC for the backend;
+- Key Vault for Netatmo credentials through App Service references;
+- optional budget alerts at 80% actual and 100% forecast cost.
 
-In produzione i cookie sono Secure/HttpOnly e il backend ammette solo il proprio Front Door, con restrizioni di rete e verifica `X-Azure-FDID`. Il frontend non conosce credenziali Azure/Netatmo e non usa CORS. Front Door applica CSP e gli header di sicurezza anche ai file statici.
+Production cookies are Secure/HttpOnly and the backend admits only its own Front Door through network restrictions and `X-Azure-FDID` validation. The frontend has no Azure/Netatmo credentials and does not use CORS. Front Door applies CSP and security headers to static files too.
 
-**Non scalare il backend a più istanze senza migrare sessioni/cache a uno storage transazionale condiviso e i lock a un coordinamento distribuito.** SQLite persistente in `/home/data/smart-house` e lock in-process sono dimensionati per la prima beta (~50 utenti, pochi contemporanei). Il journal SQLite usa rollback, non WAL, sul volume App Service. Mantenere quel volume e tutte le versioni delle chiavi Key Vault necessarie a decifrare sessioni esistenti. Nessun database di storico viene creato.
+**Do not scale to multiple backend instances without migrating sessions/cache to shared transactional storage and locks to distributed coordination.** Persistent SQLite in `/home/data/smart-house` and in-process locks target the initial beta (~50 users, few concurrent). SQLite uses rollback journaling, not WAL, on the App Service volume. Preserve that volume and every Key Vault key version needed to decrypt existing sessions. No history database is created.
 
-### Preparazione della distribuzione
+### Deployment preparation
 
-Pubblicare il progetto in un repository GitHub con ramo principale **`main`**. Le CI sono separate per frontend, backend e infrastruttura e partono solo per modifiche pertinenti; i soli README sono esclusi. I test browser sono nella CI frontend, senza avviare la pipeline backend.
+Publish to a GitHub repository with **`main`** as the primary branch. Frontend, backend, and infrastructure CI are separate and run only for relevant changes; README-only changes are excluded. Browser tests belong to frontend CI and do not invoke backend CI.
 
-Creare l'environment **production senza approvazione manuale**, configurare identità Azure OIDC, variabili, segreti e RBAC seguendo le [tabelle di configurazione GitHub](.github/README.md#impostazioni-github). Le credenziali Netatmo rimangono in Key Vault, mai nel frontend o nei YAML.
+Create the **production environment without manual approval**, and configure Azure OIDC identities, variables, secrets, and RBAC using the [GitHub configuration tables](.github/README.md#github-settings). Netatmo credentials stay in Key Vault, never in the frontend or YAML.
 
-Il primo rilascio usa un **bootstrap manuale della sola infrastruttura**, con deploy automatici disabilitati: creare il gruppo dedicato, avviare **Deploy Infrastructure**, inserire i segreti Netatmo e registrare il callback HTTPS dagli output, quindi pubblicare backend e frontend dai rispettivi workflow. La [guida infrastruttura](infra/README.md#bootstrap-manuale) descrive il provisioning a due passaggi e tutti i prerequisiti.
+The first release uses **manual infrastructure-only bootstrap**, with automatic deployments disabled: create the dedicated group, run **Deploy Infrastructure**, enter Netatmo secrets and register the HTTPS callback from the outputs, then publish backend and frontend through their workflows. The [infrastructure guide](infra/README.md#manual-bootstrap) describes two-pass provisioning and prerequisites.
 
-Dopo il bootstrap impostare la variabile **di repository** `AZURE_DEPLOY_ENABLED=true`. I merge su `main` distribuiscono automaticamente solo le sezioni cambiate, dopo CI riuscita sullo stesso commit e nell'ordine **infrastruttura → backend → frontend**. Frontend/backend riutilizzano gli artifact verificati e non ricreano l'infrastruttura. Un errore ferma le pubblicazioni successive.
+After bootstrap, set the **repository** variable `AZURE_DEPLOY_ENABLED=true`. Merges to `main` automatically deploy only changed sections after successful CI on the same commit, in order: **infrastructure → backend → frontend**. Frontend/backend reuse verified artifacts and do not recreate infrastructure. Failures stop subsequent deployment steps.
 
-I file hashed dei vecchi deploy sono conservati per non rompere tab già aperte. Le API e i cookie non vengono memorizzati dalla CDN. I budget opzionali sono nella valuta della sottoscrizione e non impongono un tetto di spesa.
+Old hashed deployment assets remain available to avoid breaking open tabs. APIs and cookies are not CDN-cached. Optional budgets use the subscription currency and do not impose a spending cap.
 
-### Costi e prerequisiti di rilascio
+### Costs and release prerequisites
 
-Non è stata creata alcuna risorsa Azure. **Il target 50–100 €/mese non è un preventivo né un tetto di spesa.** Verificare Front Door Standard (quota fissa, richieste e traffico), App Service B1, storage, Key Vault e imposte con [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/), usando la propria sottoscrizione e West Europe. Gli avvisi non arrestano risorse; le notifiche richiedono almeno un destinatario. Se la regione non offre il runtime .NET 10, non procedere con un runtime differente: aggiornare il modello o usare un'immagine .NET 10 supportata.
+No Azure resources have been created. **The EUR 50–100/month target is neither a quote nor a spending limit.** Check Front Door Standard (fixed fee, requests, traffic), App Service B1, Storage, Key Vault, and taxes with [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/), using your subscription and West Europe. Alerts do not stop resources; notifications require at least one recipient. If the region does not offer .NET 10, do not switch runtimes implicitly: update the template or use a supported .NET 10 image.
 
-Prima della beta pubblica sono ancora necessari:
+Before a public beta, the following remain necessary:
 
-- accesso OAuth con account e dispositivi reali, senza usare payload di demo come prova dell'integrazione;
-- verifica di nomi, associazioni, timestamp e campioni storici restituiti per termostato e moduli effettivamente posseduti;
-- verifica di conversioni con preferenze Netatmo non metriche e degli intervalli in assenza di misure;
-- conferma delle [condizioni e dei limiti Netatmo](https://dev.netatmo.com/guideline) per utenti esterni, eventuali autorizzazioni commerciali e informativa privacy della beta;
-- deploy reale e controllo del redirect OAuth, refresh/revoca token, persistenza dopo riavvio, restrizioni dell'origin, readiness Front Door e preventivo.
+- OAuth access with real accounts/devices, without treating demo payloads as integration evidence;
+- verification of names, associations, timestamps, and history samples for the actual thermostat/modules;
+- verification of non-metric Netatmo preferences, conversions, and ranges with missing readings;
+- confirmation of [Netatmo terms and limits](https://dev.netatmo.com/guideline) for external users, commercial permissions if needed, and the beta privacy notice;
+- real deployment and verification of OAuth redirects, token refresh/revocation, restart persistence, origin restrictions, Front Door readiness, and pricing.
 
-I payload ufficiali usati per implementare gli adapter sono quelli della [documentazione Energy](https://dev.netatmo.com/apidocumentation/energy) e [Weather](https://dev.netatmo.com/apidocumentation/weather). La disponibilità sui dispositivi reali resta da verificare: la demo e i test non sostituiscono quella verifica.
+Adapters use the official [Energy](https://dev.netatmo.com/apidocumentation/energy) and [Weather](https://dev.netatmo.com/apidocumentation/weather) payload documentation. Real-device availability still needs verification; demo mode and tests do not replace it.
 
-## Verifica locale
+## Local verification
 
 ```bash
-dotnet test backend/SmartHouse.Api.Tests
+Netatmo__ClientId='' Netatmo__ClientSecret='' dotnet test backend/SmartHouse.Api.Tests
 cd frontend
 npm test
 npm run build
 cd ..
+npm test --prefix sdk/typescript
 az bicep build --file infra/main.bicep --outfile /tmp/smart-house-template.json
 ```
 
-I test coprono accesso/CSRF, scadenza della sessione, logout, isolamento, raggruppamento e provenienza, valori scaduti, throttling concorrente, formati di storico, intervalli consentiti, conversioni, selezione della casa e completezza delle traduzioni. NuGet tratta gli advisory come errori; dipendenze native SQLite e XML crypto sono esplicitamente aggiornate.
+Tests cover sign-in/CSRF, session expiration, logout, isolation, grouping/provenance, stale values, concurrent throttling, history shapes/ranges, conversions, home selection, translation completeness, and generated clients. NuGet treats advisories as errors; native SQLite and XML crypto dependencies are explicitly updated.
 
-Per la verifica nel browser, Playwright avvia automaticamente i server demo se non sono già attivi:
+For browser verification, Playwright starts demo servers if they are not already running:
 
 ```bash
 cd frontend
@@ -132,6 +141,6 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Gli scenari desktop e mobile verificano accesso, misure duplicate, grafici, cambio lingua, logout, assenza di polling e scadenza a pagina aperta.
+Desktop/mobile scenarios cover sign-in, duplicate measurements, charts, language changes, logout, no polling, and expiration while the page remains open.
 
-Su schermi sotto 600 px le card sono due per riga: nome dispositivo e data/ora del campione sono nascosti, mentre titoli delle stanze, stato scaduto e aggiornamenti falliti restano visibili. L'app bar contiene **Aggiorna** nella dashboard; nello storico sostituisce l'icona della casa con una freccia **Indietro**, anche durante caricamenti ed errori. La freccia torna alla pagina interna precedente oppure alla dashboard quando lo storico viene aperto direttamente, senza uscire dall'app. L'intervallo del grafico rimane accanto al grafico.
+Below 600 px, cards use two columns: device names and sample timestamps are hidden, while room headings, stale state, and update failures remain visible. The dashboard app bar contains **Refresh**; history replaces the home icon with a **Back** arrow, including during loading/errors. The arrow returns to the previous internal page or the dashboard for a direct history link, without leaving the app. The range selector remains beside the chart.

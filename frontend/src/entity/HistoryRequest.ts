@@ -1,1 +1,1 @@
-export interface HistoryRequest { homeId: string; measurementId: string; hours: number }
+export type { HistoryApiArg as HistoryRequest } from '../api/generated';

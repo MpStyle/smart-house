@@ -1,0 +1,60 @@
+name: Publish SDK
+on:
+  push:
+    tags: ['sdk-v*']
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: publish-sdk
+  cancel-in-progress: false
+jobs:
+  verify:
+    uses: ./.github/workflows/ci-sdk.yml
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate release tag and main ancestry
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^sdk-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo 'Use sdk-vX.Y.Z without leading zeroes.' >&2; exit 1; }
+          git merge-base --is-ancestor HEAD origin/main || { echo 'SDK releases must reference a commit on main.' >&2; exit 1; }
+          echo "value=${RELEASE_TAG#sdk-v}" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://npm.pkg.github.com
+          scope: '@mpstyle'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: npm ci --prefix sdk/typescript --no-audit --no-fund
+      - name: Pack both SDKs with the tag version
+        env:
+          SDK_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          dotnet pack sdk/csharp --configuration Release -p:PackageVersion="$SDK_VERSION" --output "${RUNNER_TEMP}/sdk" --verbosity quiet
+          cd sdk/typescript
+          npm version "$SDK_VERSION" --no-git-tag-version --allow-same-version
+          npm pack --pack-destination "${RUNNER_TEMP}/sdk"
+      - name: Publish NuGet package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: dotnet nuget push "${RUNNER_TEMP}"/sdk/*.nupkg --source "https://nuget.pkg.github.com/${OWNER}/index.json" --api-key "$GH_TOKEN" --skip-duplicate
+      - name: Publish npm package
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: npm publish "${RUNNER_TEMP}"/sdk/*.tgz

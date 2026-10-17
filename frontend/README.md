@@ -1,30 +1,50 @@
 # Frontend
 
-Dashboard Vite, React e TypeScript con MUI, Redux Toolkit e i18next. Pubblicata come sito statico su Azure Storage, raggiungibile tramite Front Door sullo stesso origin del backend.
+Vite, React, and TypeScript dashboard with MUI, Redux Toolkit, and i18next. Published as an Azure Storage static website, reached through Front Door on the same origin as the backend.
 
-## Organizzazione
+## Organization
 
-Le pagine sono in `src/component/page/<Pagina>/<Pagina>.tsx`; i componenti condivisi in `src/component/common/<Componente>/<Componente>.tsx`. I componenti specifici di una pagina rimangono nella sua cartella, ciascuno con un tipo locale per le props. I modelli e i tipi condivisi sono in `src/entity/`, la logica e lo store in `src/book/`, le chiamate API in `src/api/`.
+Pages live in `src/component/page/<Page>/<Page>.tsx`; shared components live in `src/component/common/<Component>/<Component>.tsx`. Page-specific components stay beside their page, each with a local props type. Shared models/types live in `src/entity/`, application logic and the store in `src/book/`, and API calls in `src/api/`.
 
-Le rotte delle pagine sono costanti in `src/book/routes.ts`, condivise da router, riconoscimento delle pagine, navigazione e redirect. `createHistoryRoute` costruisce i link allo storico dalla stessa costante del percorso, codificando gli ID. Gli endpoint HTTP rimangono separati in `src/api/`; gli URL e il routing con hash sono invariati.
+Page routes are constants in `src/book/routes.ts`, shared by the router, page recognition, navigation, and redirects. `createHistoryRoute` builds history links from the same route constant and encodes IDs. HTTP endpoints remain separate in `src/api/`; hash-based page routes are unchanged.
 
-AppBar riceve il booleano `showBack`, derivato dalle rotte dello storico e delle impostazioni: quando attivo mostra una freccia al posto dell'icona della casa e gestisce il ritorno alla pagina interna precedente. Se non esiste una voce precedente nella cronologia del router, torna alla dashboard senza uscire dall'app. Questo controllo non usa `PageActionsContext`, che rimane dedicato alle azioni di pagina come refresh.
+AppBar receives `showBack`, derived from history/settings routes: when true, it replaces the home icon with an arrow and returns to the previous internal page. With no previous router history entry, it returns to the dashboard without leaving the app. This does not use `PageActionsContext`, which is reserved for page actions such as refresh.
 
-L'account occupa l'estrema destra dell'AppBar, con le azioni di pagina immediatamente alla sua sinistra. Su schermi stretti il gruppo resta unito e, se necessario, passa alla riga successiva allineato a destra. Sotto i 600 px il pulsante mostra soltanto l'icona utente, senza nome o freccia, con un'area interattiva di 44 × 44 px. Il nome completo resta nel `title` e nell'etichetta accessibile, e il clic apre lo stesso menu. Da 600 px sono visibili nome e freccia; i nomi lunghi vengono troncati con ellissi.
+The account control sits at the far right of AppBar, immediately after page actions. On narrow screens the group stays together and wraps to a right-aligned next row when needed. Below 600 px the button shows only the user icon, without a name or arrow, with a 44 x 44 px interaction area. The full name remains in `title` and the accessible label; clicking opens the same menu. From 600 px, name and arrow are visible; long names are ellipsized.
 
-Il pulsante account nell'AppBar apre un menu con impostazioni e logout. Mostra l'identità restituita dal backend (l'email Netatmo quando il nome non è disponibile), oppure un'etichetta account se il provider non la fornisce; in demo mostra "Demo". Lingua e tema sono disponibili soltanto nella pagina `Settings`, alla rotta `/#/settings`, anche se non ci sono case o il caricamento delle case fallisce. Sono in due riquadri distinti, uno sotto l'altro, con radio button sempre visibili: le opzioni sono su tre colonne da 600 px e in verticale sotto questa soglia. Le preferenze si salvano automaticamente; durante il caricamento delle traduzioni è disabilitato soltanto il gruppo lingua.
+The account button opens settings and logout. It shows the backend identity (Netatmo email when no name is available), an account label if the provider supplies neither, or "Demo" in demo mode. Language and theme are available only on `Settings`, at `/#/settings`, even without homes or when home loading fails. They occupy separate vertically stacked panels with always-visible radio buttons: three columns from 600 px and vertical options below that threshold. Preferences save automatically; translation loading disables only the language group.
 
-Settings permette di riordinare stanze e misurazioni tramite maniglie drag-and-drop, con mouse, touch e tastiera. Le misurazioni restano nella propria stanza. L'ordine è applicato alla dashboard e salvato automaticamente in `localStorage` sotto `smart-house.dashboardOrders`, separato per casa e per stanza, senza sincronizzazione tra browser o dispositivi. Le nuove stanze o misurazioni compaiono dopo quelle già ordinate; gli ID non più presenti vengono ignorati. Il cambio di casa nelle impostazioni mantiene aperta la pagina e modifica l'ordine della casa selezionata.
+Settings supports reordering rooms and measurements with drag handles, using mouse, touch, or keyboard. Measurements remain in their own rooms. Dashboard order saves automatically in `localStorage` under `smart-house.dashboardOrders`, independently per home and room, without cross-browser/device synchronization. New items follow ordered items; removed IDs are ignored. Changing homes in settings keeps the page open and changes the selected home's order.
 
-I radio button delle lingue mostrano miniature SVG decorative di 24 x 18 px a sinistra dei nomi: Regno Unito per English, Italia, Francia, Germania, Spagna e Portogallo. I nomi delle lingue restano le etichette accessibili. Le sei bandiere sono asset locali in `src/assets/flags/`, tratti da `flag-icons` 7.5.0 con licenza MIT in `public/licenses/flag-icons.txt`, inclusa anche nel build pubblicato. Non richiedono dipendenze aggiuntive o servizi esterni a runtime.
+Language radio buttons show decorative 24 x 18 px SVG flags beside names: United Kingdom for English, then Italy, France, Germany, Spain, and Portugal. Language names remain accessible labels. Flags are local assets in `src/assets/flags/`, from `flag-icons` 7.5.0 under its MIT license in `public/licenses/flag-icons.txt`, also included in the published build. No extra runtime dependency or external service is required.
 
-Le sei lingue sono definite in `src/locales/*.json` e caricate su richiesta tramite `i18next-http-backend`. Vite pubblica JSON separati con nome hashed sotto `dist/assets/`, compatibili con la cache e il deploy esistenti; non sono incorporati nel bundle JavaScript. Le lingue già caricate vengono riutilizzate. Se una lingua non si carica, l'app passa all'inglese senza avviso a schermo e salva la lingua effettivamente caricata; gli errori rimangono in console. Se anche l'inglese non è disponibile, una schermata essenziale permette di riprovare.
+The six languages live in `src/locales/*.json` and load on demand through `i18next-http-backend`. Vite publishes separate hashed JSON files in `dist/assets/`, compatible with existing caching/deployment; they are not embedded in the JavaScript bundle. Loaded languages are reused. If a language fails to load, the app switches to English without an on-screen warning and saves the language actually loaded; errors remain in the console. If English also fails, a minimal screen allows retrying.
 
-I `console.log` di request e response sono attivi solo in sviluppo: includono metodo/URL/stato e payload, oscurano le proprietà sensibili e non stampano header di autenticazione, cookie o token anti-CSRF. Gli errori rimangono diagnosticabili anche in produzione.
+Request/response `console.log` calls run only in development: they include method/URL/status and payload, redact sensitive properties, and never print authentication headers, cookies, or antiforgery tokens. Errors remain diagnosable in production.
 
-## Esecuzione locale
+## Generated API client
 
-Dalla radice del repository:
+[`src/api/generated.ts`](src/api/generated.ts) is generated by `@rtk-query/codegen-openapi` from [`../openapi/smart-house.json`](../openapi/smart-house.json). Do not edit it manually. `baseApi.ts` preserves same-origin cookies, redacted logging, session-expiration handling on 401, and the existing cache policy. `api.ts` exports application hooks; API entity files re-export generated types instead of duplicating the contract.
+
+After backend API changes, update the contract and **all** clients from the repository root:
+
+```bash
+npm ci --prefix frontend
+node scripts/generate-api.mjs
+```
+
+To regenerate only frontend endpoints from an already updated contract:
+
+```bash
+cd frontend
+npm run api:generate
+```
+
+Generated requests use `/api/v1/...`, including encoded path identifiers and CSRF headers for mutations. The frontend can build from versioned sources without a running backend or .NET. [CI SDK](../.github/workflows/ci-sdk.yml) rejects stale generated sources.
+
+## Local development
+
+From the repository root:
 
 ```bash
 cd frontend
@@ -32,13 +52,13 @@ npm ci
 npm run dev
 ```
 
-Aprire <http://localhost:5173>. Vite usa porta `5173` con `strictPort: true`: se occupata, non sceglie silenziosamente una porta diversa.
+Open <http://localhost:5173>. Vite uses port `5173` with `strictPort: true`; it does not silently pick a different port if occupied.
 
-Avviare anche il [backend](../backend/README.md) su `http://localhost:5080`, in un altro terminale. Il frontend invia richieste relative a `/api`; il proxy di sviluppo le inoltra al backend, evitando CORS e mantenendo cookie e callback OAuth sull'origin del frontend.
+Start the [backend](../backend/README.md) on `http://localhost:5080` in another terminal. The frontend sends relative `/api/v1` requests; the development proxy forwards `/api` to the backend, avoiding CORS and keeping cookies and OAuth callbacks on the frontend origin.
 
-### Configurare la porta del backend locale
+### Configuring the local backend port
 
-Il target è configurato in [`vite.config.ts`](vite.config.ts):
+The target is configured in [`vite.config.ts`](vite.config.ts):
 
 ```typescript
 server: {
@@ -53,40 +73,40 @@ server: {
 },
 ```
 
-Se il backend ascolta, per esempio, su **5090**, modificare **solo il target del proxy** in `http://localhost:5090` e avviare il backend sulla stessa porta:
+If the backend listens on **5090**, change **only the proxy target** to `http://localhost:5090` and start the backend on that port:
 
 ```bash
-# Dalla radice, in un terminale separato:
+# From the repository root, in a separate terminal:
 dotnet build backend/SmartHouse.Api
 cd backend/SmartHouse.Api
 ASPNETCORE_ENVIRONMENT=Development DemoMode=true \
   dotnet bin/Debug/net10.0/SmartHouse.Api.dll --urls http://localhost:5090
 ```
 
-Riavviare `npm run dev` dopo la modifica. Il browser continua a usare `http://localhost:5173/api/...`; **non** chiamare direttamente `http://localhost:5090` dal codice React e **non** impostare `PublicOrigin` alla porta del backend.
+Restart `npm run dev` after changing the configuration. The browser still uses `http://localhost:5173/api/v1/...`; **do not** call `http://localhost:5090` directly from React or set `PublicOrigin` to the backend port.
 
-`PublicOrigin` nel backend deve restare `http://localhost:5173`, e il redirect URI locale Netatmo `http://localhost:5173/api/auth/callback`: sono l'origin visibile al browser, non la destinazione interna del proxy.
+Backend `PublicOrigin` must remain `http://localhost:5173`, with Netatmo local redirect URI `http://localhost:5173/api/v1/auth/callback`: these identify the browser-visible origin, not the internal proxy target.
 
-Se si cambia invece la **porta frontend**, allineare `server.port`, `PublicOrigin` e redirect URI Netatmo al nuovo origin. Se si abilita HTTPS, allineare anche protocollo e certificati senza disabilitare la verifica TLS.
+If changing the **frontend port**, align `server.port`, `PublicOrigin`, and the Netatmo redirect URI to the new origin. If enabling HTTPS, align the scheme and certificates without disabling TLS verification.
 
-I [test Playwright](playwright.config.ts) usano esplicitamente frontend `5173` e backend `5080`. Per eseguirli con porte personalizzate, allineare anche `use.baseURL`, URL/command dei `webServer` e `PublicOrigin` del backend demo; non basta modificare il proxy. La configurazione standard della CI continua a utilizzare le porte predefinite.
+[Playwright tests](playwright.config.ts) explicitly use frontend `5173` and backend `5080`. For custom ports, also align `use.baseURL`, `webServer` URLs/commands, and demo backend `PublicOrigin`; changing only the proxy is insufficient. Standard CI keeps the default ports.
 
-Verifica rapida del proxy:
+Quick proxy check:
 
 ```bash
-curl --fail http://localhost:5173/api/health
-# Risposta attesa: {"status":"ok"}
+curl --fail http://localhost:5173/api/v1/health
+# Expected response: {"status":"ok"}
 ```
 
-`DemoMode=true` è facoltativo e solo per Development; i dati demo sono simulati. Per Netatmo reale, avviare il backend senza demo e configurare i segreti come descritto nel suo README.
+`DemoMode=true` is optional and Development-only; its data is simulated. For real Netatmo access, start without demo and configure credentials as described in the backend README.
 
-## CI frontend
+## Frontend CI
 
-[`ci-frontend.yml`](../.github/workflows/ci-frontend.yml) parte solo per modifiche frontend o ai suoi workflow, oltre alle parti condivise delle pipeline; i soli README sono esclusi.
+[`ci-frontend.yml`](../.github/workflows/ci-frontend.yml) runs for frontend changes, its workflows, or shared pipeline implementation; README-only changes are excluded.
 
-Esegue `npm ci`, Vitest, build TypeScript/Vite e **test end-to-end desktop/mobile**. I test browser avviano il backend demo, ma non eseguono la CI o il deploy backend. Non sono richiesti segreti Azure o Netatmo.
+It runs `npm ci`, Vitest, TypeScript/Vite build, and **desktop/mobile end-to-end tests**. Browser tests start a demo backend but do not run backend CI or deployment. No Azure or Netatmo secrets are required.
 
-Su `main` conserva `frontend/dist/` nell'artifact `frontend-package` per sette giorni, solo dopo il successo dei test. Comandi locali:
+On `main`, it retains `frontend/dist/` in `frontend-package` for seven days, only after tests succeed. Local commands:
 
 ```bash
 npm test
@@ -95,23 +115,21 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-## Deploy frontend su Azure
+## Frontend deployment to Azure
 
-[`deploy-frontend.yml`](../.github/workflows/deploy-frontend.yml) viene chiamato dal coordinatore dopo un merge su `main` che cambia il frontend; può anche essere avviato manualmente da `main`. Richiede un artifact CI riuscito **dello stesso commit**.
+[`deploy-frontend.yml`](../.github/workflows/deploy-frontend.yml) is called by the coordinator after a frontend-changing merge to `main`, or manually from `main`. It requires a successful CI artifact for **the same commit**.
 
-Configurazione GitHub:
-
-| Nome | Posizione | Necessità |
+| Name | Location | Requirement |
 | --- | --- | --- |
-| `AZURE_DEPLOY_ENABLED=true` | Variabile di repository | Solo per attivare l'automazione dopo il bootstrap |
-| `AZURE_RESOURCE_GROUP` | Variabile environment `production` | Obbligatoria |
-| `AZURE_DEPLOYMENT_NAME` | Variabile environment `production` | Opzionale; default `smart-house` |
-| `AZURE_CLIENT_ID` | Segreto environment `production` | Obbligatorio, identità federata |
-| `AZURE_TENANT_ID` | Segreto environment `production` | Obbligatorio |
-| `AZURE_SUBSCRIPTION_ID` | Segreto environment `production` | Obbligatorio |
+| `AZURE_DEPLOY_ENABLED=true` | Repository variable | Enables automation after bootstrap |
+| `AZURE_RESOURCE_GROUP` | `production` environment variable | Required |
+| `AZURE_DEPLOYMENT_NAME` | `production` environment variable | Optional; defaults to `smart-house` |
+| `AZURE_CLIENT_ID` | `production` environment secret | Required; federated identity |
+| `AZURE_TENANT_ID` | `production` environment secret | Required |
+| `AZURE_SUBSCRIPTION_ID` | `production` environment secret | Required |
 
-Storage Account, Front Door e URL vengono letti dagli output del bootstrap infrastruttura. Non occorrono `VITE_API_URL`, variabili di build con URL Azure, token Netatmo o credenziali Storage nel frontend: in produzione il browser usa sempre `/api` sul proprio origin.
+Storage Account, Front Door, and public URL come from infrastructure outputs. The frontend needs no `VITE_API_URL`, Azure URL build variables, Netatmo tokens, or Storage credentials: production uses `/api/v1` on its own origin.
 
-La pipeline scarica il package verificato, carica asset hashed con cache immutabile, pubblica `index.html` con `no-cache`, invalida `/` e `/index.html` su Front Door e verifica il sito. Conserva asset precedenti per non rompere tab aperte. **Non aggiorna App Service né esegue Bicep.**
+The pipeline downloads the verified package, uploads hashed assets with immutable caching, publishes `index.html` with `no-cache`, purges `/` and `/index.html` from Front Door, and verifies the website. It retains old assets to avoid breaking open tabs. **It does not update App Service or run Bicep.**
 
-L'identità OIDC richiede lettura degli output ARM, `Storage Blob Data Contributor` sullo storage frontend e permessi Front Door per il purge. Configurazione completa di OIDC, ruoli e bootstrap: [README GitHub Actions](../.github/README.md).
+The OIDC identity requires ARM output read access, `Storage Blob Data Contributor` on frontend storage, and Front Door purge permissions. Full OIDC, role, and bootstrap configuration: [GitHub Actions README](../.github/README.md).

@@ -20,18 +20,24 @@ public sealed class ProviderHandler : HttpMessageHandler
         if (request.RequestUri!.AbsolutePath.EndsWith("/oauth2/token", StringComparison.Ordinal))
         {
             Interlocked.Increment(ref Refreshes);
+
             return Task.FromResult(Response(Revoked ? HttpStatusCode.BadRequest : HttpStatusCode.OK,
                 Revoked ? """{"error":"invalid_grant"}""" : """{"access_token":"fresh","refresh_token":"rotated","expires_in":10800}"""));
         }
         Assert.Equal("fresh", request.Headers.Authorization?.Parameter);
+
         return Task.FromResult(Response(HttpStatusCode.OK, """{"body":{"homes":[]}}"""));
     }
     private static HttpResponseMessage Response(HttpStatusCode status, string json) =>
-        new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
+        new(status)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
 }
 
 public class TokenTests
 {
+    /// <summary>Verifies refresh coalescing, unchanged session expiration, encrypted tokens, and retained cache.</summary>
     [Fact]
     public async Task ConcurrentRequestsRotateTokensOnceWithoutExtendingSessionOrDroppingCache()
     {
@@ -45,7 +51,8 @@ public class TokenTests
         using var http = new HttpClient(handler);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Netatmo:ClientId"] = "test-client", ["Netatmo:ClientSecret"] = "test-only-not-a-secret"
+            ["Netatmo:ClientId"] = "test-client",
+            ["Netatmo:ClientSecret"] = "test-only-not-a-secret"
         }).Build();
         var provider = new NetatmoClient(http, store, config, app.Clock, NullLogger<NetatmoClient>.Instance);
         await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => provider.Get(sid, "homesdata", null, CancellationToken.None)));
@@ -66,6 +73,7 @@ public class TokenTests
         Assert.DoesNotContain("rotated", payload);
     }
 
+    /// <summary>Verifies that provider refresh revocation removes the corresponding server session.</summary>
     [Fact]
     public async Task RevokedRefreshTokenDeletesTheServerSession()
     {
@@ -77,7 +85,8 @@ public class TokenTests
         using var http = new HttpClient(handler);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Netatmo:ClientId"] = "test-client", ["Netatmo:ClientSecret"] = "test-only-not-a-secret"
+            ["Netatmo:ClientId"] = "test-client",
+            ["Netatmo:ClientSecret"] = "test-only-not-a-secret"
         }).Build();
         var provider = new NetatmoClient(http, store, config, app.Clock, NullLogger<NetatmoClient>.Instance);
         var exception = await Assert.ThrowsAsync<ProviderException>(() => provider.Get(sid, "homesdata", null, CancellationToken.None));
@@ -85,6 +94,7 @@ public class TokenTests
         Assert.Null(store.Find(sid));
     }
 
+    /// <summary>Verifies that an in-flight token update cannot recreate a revoked session or its cache.</summary>
     [Fact]
     public void AnInFlightRefreshCannotResurrectALoggedOutSession()
     {

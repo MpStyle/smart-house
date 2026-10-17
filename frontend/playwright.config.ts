@@ -16,7 +16,7 @@ export default defineConfig({
         ASPNETCORE_ENVIRONMENT: 'Development', DemoMode: 'true', PublicOrigin: 'http://localhost:5173',
         Netatmo__ClientId: '', Netatmo__ClientSecret: '',
       },
-      url: 'http://localhost:5080/api/health',
+      url: 'http://localhost:5080/api/v1/health',
       reuseExistingServer: true,
       timeout: 120_000,
     },

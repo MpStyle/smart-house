@@ -8,6 +8,7 @@ namespace SmartHouse.Api.Tests;
 
 public class MeasurementTests
 {
+    /// <summary>Verifies freshness boundaries using the measurement timestamp and permitted clock skew.</summary>
     [Fact]
     public void FreshnessUsesMeasurementTimeNotFetchTime()
     {
@@ -18,24 +19,47 @@ public class MeasurementTests
         Assert.False(Measurements.Fresh(now.AddMinutes(6), now));
     }
 
+    /// <summary>Verifies finite values, retention limits, timestamps, and explicit freshness states.</summary>
     [Fact]
     public void LastKnownValuesHaveExplicitStateAndAnExactFortyEightHourLimit()
     {
         var now = DateTimeOffset.UtcNow;
         var measurement = new Measurement("id", "temperature", "Device", 21, "°C", now.AddMinutes(-30), null);
         Assert.Equal("fresh", Measurements.State(measurement, now));
-        Assert.Equal("stale", Measurements.State(measurement with { MeasuredAt = now.AddMinutes(-30).AddTicks(-1) }, now));
-        Assert.Equal("stale", Measurements.State(measurement with { UpdateFailed = true }, now));
-        Assert.True(Measurements.Retained(measurement with { MeasuredAt = now.AddHours(-48) }, now));
-        Assert.Equal("unavailable", Measurements.State(measurement with { MeasuredAt = now.AddHours(-48).AddTicks(-1) }, now));
-        Assert.False(Measurements.Retained(measurement with { MeasuredAt = null }, now));
-        Assert.False(Measurements.Retained(measurement with { MeasuredAt = now.AddMinutes(6) }, now));
-        Assert.False(Measurements.Retained(measurement with { Value = double.NaN }, now));
+        Assert.Equal("stale", Measurements.State(measurement with
+        {
+            MeasuredAt = now.AddMinutes(-30).AddTicks(-1)
+        }, now));
+        Assert.Equal("stale", Measurements.State(measurement with
+        {
+            UpdateFailed = true
+        }, now));
+        Assert.True(Measurements.Retained(measurement with
+        {
+            MeasuredAt = now.AddHours(-48)
+        }, now));
+        Assert.Equal("unavailable", Measurements.State(measurement with
+        {
+            MeasuredAt = now.AddHours(-48).AddTicks(-1)
+        }, now));
+        Assert.False(Measurements.Retained(measurement with
+        {
+            MeasuredAt = null
+        }, now));
+        Assert.False(Measurements.Retained(measurement with
+        {
+            MeasuredAt = now.AddMinutes(6)
+        }, now));
+        Assert.False(Measurements.Retained(measurement with
+        {
+            Value = double.NaN
+        }, now));
         var snapshot = new Snapshot("home", "UTC", now, [new("room", "Room", [measurement])], []);
         Assert.Equal(21, Measurements.LimitToRetention(snapshot, now.AddMinutes(1)).Rooms[0].Measurements[0].Value);
         Assert.Null(Measurements.LimitToRetention(snapshot, now.AddHours(48)).Rooms[0].Measurements[0].Value);
     }
 
+    /// <summary>Verifies supported unit conversions and propagation of missing values.</summary>
     [Fact]
     public void MetricAndImperialConversionsApplyToBothCurrentAndHistory()
     {
@@ -47,6 +71,7 @@ public class MeasurementTests
         Assert.Null(Measurements.Convert(null, "°C", new(1)).Value);
     }
 
+    /// <summary>Verifies supported provider history shapes and preservation of missing samples.</summary>
     [Theory]
     [InlineData("{\"1700000000\":[21],\"1700001800\":[null],\"1700003600\":[22]}")]
     [InlineData("[{\"beg_time\":1700000000,\"step_time\":1800,\"value\":[[21],[null],[22]]}]")]
@@ -62,6 +87,7 @@ public class MeasurementTests
         Assert.Equal(TimeSpan.FromMinutes(30), values[1].Time - values[0].Time);
     }
 
+    /// <summary>Verifies rejection of malformed history instead of a successful empty result.</summary>
     [Fact]
     public void UnexpectedHistoryIsAnErrorNotAnEmptySuccess()
     {
@@ -69,6 +95,7 @@ public class MeasurementTests
         Assert.Throws<ProviderException>(() => Measurements.ParseHistory(document.RootElement));
     }
 
+    /// <summary>Verifies that room normalization preserves meaningful internal whitespace.</summary>
     [Fact]
     public void RoomNamesMergeOnlyCaseAndEdgeWhitespace()
     {

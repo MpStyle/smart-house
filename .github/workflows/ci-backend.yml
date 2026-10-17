@@ -5,6 +5,10 @@ on:
       - 'backend/**'
       - 'global.json'
       - 'SmartHouse.sln'
+      - 'sdk/csharp/**'
+      - 'openapi/**'
+      - 'scripts/backend-style*'
+      - '.editorconfig'
       - '.github/workflows/ci-backend.yml'
       - '.github/workflows/deploy-backend.yml'
       - '.github/workflows/deploy.yml'
@@ -17,6 +21,10 @@ on:
       - 'backend/**'
       - 'global.json'
       - 'SmartHouse.sln'
+      - 'sdk/csharp/**'
+      - 'openapi/**'
+      - 'scripts/backend-style*'
+      - '.editorconfig'
       - '.github/workflows/ci-backend.yml'
       - '.github/workflows/deploy-backend.yml'
       - '.github/workflows/deploy.yml'
@@ -48,7 +56,15 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Verify pipeline selection
         run: node --test .github/scripts/sections.test.mjs
+      - name: Verify backend formatting
+        run: |
+          dotnet format SmartHouse.sln --diagnostics IDE0011 --verify-no-changes --verbosity quiet
+          node --test scripts/backend-style.test.mjs
+          node scripts/backend-style.mjs
       - name: Test and package backend
+        env:
+          Netatmo__ClientId: ''
+          Netatmo__ClientSecret: ''
         run: |
           dotnet test backend/SmartHouse.Api.Tests --configuration Release --verbosity quiet
           dotnet publish backend/SmartHouse.Api -c Release -o "${RUNNER_TEMP}/api" --verbosity quiet

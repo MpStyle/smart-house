@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 test('language flags are local SVGs to the left of accessible names, fit mobile and select the language when clicked', async ({ page }) => {
-  await page.route('**/api/auth/session', route => route.fulfill({ json: {
+  await page.route('**/api/v1/auth/session', route => route.fulfill({ json: {
     authenticated: true, csrfToken: 'flag-test', authAvailable: true, demoAvailable: false, demo: false, expiresAt: null,
   } }));
-  await page.route('**/api/homes/', route => route.fulfill({ json: { homes: [], warnings: [] } }));
+  await page.route('**/api/v1/homes', route => route.fulfill({ json: { homes: [], warnings: [] } }));
   await page.goto('/#/settings');
   const names = ['English', 'Italiano', 'Français', 'Deutsch', 'Español', 'Português'];
   await expect(page.getByRole('radiogroup', { name: 'Language', exact: true })).toBeVisible();

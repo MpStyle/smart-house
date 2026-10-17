@@ -19,7 +19,7 @@ const home = { id: 'home', name: 'Casa', timezone: 'Europe/Rome' };
 const now = Date.parse('2026-10-02T10:00:00Z');
 const measurement: Measurement = {
   id: 'temperature', kind: 'temperature', deviceName: 'Station', value: 21.2,
-  unit: '°C', measuredAt: new Date(now).toISOString(), hasHistory: true, updateFailed: false, status: 'fresh',
+  unit: '°C', measuredAt: new Date(now).toISOString(), hasHistory: true, updateFailed: false, status: 'fresh', sampleMinutes: null,
 };
 
 describe('dashboard behavior', () => {

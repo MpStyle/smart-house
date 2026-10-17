@@ -77,7 +77,7 @@ test('account menu owns settings and logout; language and theme live in settings
   await banner.getByRole('button', { name: 'Demo', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Esci' }).click();
   await expect(page.getByRole('button', { name: 'Esplora la demo' })).toBeVisible();
-  expect((await page.request.get('/api/homes/')).status()).toBe(401);
+  expect((await page.request.get('/api/v1/homes')).status()).toBe(401);
 });
 
 test('mouse and touch reorder rooms and measurements, persist them and update the dashboard', async ({ page }, info) => {
@@ -103,13 +103,13 @@ test('mouse and touch reorder rooms and measurements, persist them and update th
 });
 
 test('keyboard sorting supports cancellation and isolates saved orders when switching homes', async ({ page }) => {
-  await page.route('**/api/homes/', async route => {
+  await page.route('**/api/v1/homes', async route => {
     const response = await route.fetch();
     const data = await response.json();
     await route.fulfill({ response, json: { ...data, homes: [...data.homes, { ...data.homes[0], id: 'second-home', name: 'Second home' }] } });
   });
-  await page.route('**/api/homes/second-home/measurements', async route => {
-    const data = await (await page.request.get('/api/homes/demo-home/measurements')).json();
+  await page.route('**/api/v1/homes/second-home/measurements', async route => {
+    const data = await (await page.request.get('/api/v1/homes/demo-home/measurements')).json();
     await route.fulfill({ json: { ...data, homeId: 'second-home' } });
   });
   await page.goto('/');
@@ -144,7 +144,7 @@ test('keyboard sorting supports cancellation and isolates saved orders when swit
 
 test('settings remains available with no homes and on home discovery failure', async ({ page }) => {
   let fail = false;
-  await page.route('**/api/homes/', route => route.fulfill(fail
+  await page.route('**/api/v1/homes', route => route.fulfill(fail
     ? { status: 502, json: { code: 'provider_unavailable' } }
     : { json: { homes: [], warnings: [] } }));
   await page.goto('/');
@@ -161,13 +161,13 @@ test('settings remains available with no homes and on home discovery failure', a
 });
 
 test('real accounts display provider identity and retain access to the menu during snapshot failure', async ({ page }) => {
-  await page.route('**/api/auth/session', route => route.fulfill({ json: {
+  await page.route('**/api/v1/auth/session', route => route.fulfill({ json: {
     authenticated: true, csrfToken: 'test-csrf', authAvailable: true, demoAvailable: false, demo: false, expiresAt: null,
   } }));
-  await page.route('**/api/homes/', route => route.fulfill({ json: {
+  await page.route('**/api/v1/homes', route => route.fulfill({ json: {
     homes: [{ id: 'home', name: 'Home', timezone: 'UTC' }], warnings: [], accountName: 'person@example.test',
   } }));
-  await page.route('**/api/homes/home/measurements', route => route.fulfill({ status: 502, json: { code: 'provider_unavailable' } }));
+  await page.route('**/api/v1/homes/home/measurements', route => route.fulfill({ status: 502, json: { code: 'provider_unavailable' } }));
   await page.goto('/#/settings');
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'person@example.test', exact: true }).click();

@@ -1,0 +1,70 @@
+name: CI SDK
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'sdk/**'
+      - 'openapi/**'
+      - 'scripts/**'
+      - '.config/dotnet-tools.json'
+      - 'global.json'
+      - '.editorconfig'
+      - '.github/workflows/ci-sdk.yml'
+      - '.github/workflows/publish-sdk.yml'
+      - '!**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'sdk/**'
+      - 'openapi/**'
+      - 'scripts/**'
+      - '.config/dotnet-tools.json'
+      - 'global.json'
+      - '.editorconfig'
+      - '.github/workflows/ci-sdk.yml'
+      - '.github/workflows/publish-sdk.yml'
+      - '!**/[Rr][Ee][Aa][Dd][Mm][Ee]*'
+  workflow_call:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            sdk/typescript/package-lock.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: npm ci --prefix frontend --no-audit --no-fund && npm ci --prefix sdk/typescript --no-audit --no-fund
+      - name: Regenerate contract and clients
+        run: node scripts/generate-api.mjs
+      - name: Reject stale or missing generated files
+        run: |
+          git diff --exit-code -- openapi frontend/src/api/generated.ts sdk/csharp/Generated sdk/typescript/src
+          test -z "$(git ls-files --others --exclude-standard -- openapi frontend/src/api/generated.ts sdk/csharp/Generated sdk/typescript/src)"
+      - name: Verify generated clients
+        env:
+          Netatmo__ClientId: ''
+          Netatmo__ClientSecret: ''
+        run: |
+          dotnet test backend/SmartHouse.Api.Tests --configuration Release --verbosity quiet
+          npm test --prefix sdk/typescript
+          npm run build --prefix frontend
+          npm test --prefix frontend -- src/test/api.test.ts
+      - name: Verify package contents
+        run: |
+          dotnet pack sdk/csharp --configuration Release --output "${RUNNER_TEMP}/sdk" --verbosity quiet
+          cd sdk/typescript && npm pack --dry-run

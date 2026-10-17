@@ -1,3 +1,1 @@
-import type { Measurement } from './Measurement';
-
-export interface Room { id: string; name: string; measurements: Measurement[] }
+export type { RoomResponse as Room } from '../api/generated';

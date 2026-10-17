@@ -1,1 +1,1 @@
-export interface Home { id: string; name: string; timezone: string }
+export type { HomeResponse as Home } from '../api/generated';

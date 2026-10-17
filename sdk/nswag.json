@@ -1,0 +1,36 @@
+{
+  "runtime": "Net100",
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "../openapi/smart-house.json"
+    }
+  },
+  "codeGenerators": {
+    "openApiToCSharpClient": {
+      "className": "SmartHouseClient",
+      "namespace": "SmartHouse.Sdk",
+      "operationGenerationMode": "SingleClientFromOperationId",
+      "jsonLibrary": "SystemTextJson",
+      "generateClientInterfaces": true,
+      "generateOptionalParameters": true,
+      "generateNullableReferenceTypes": true,
+      "useBaseUrl": false,
+      "generateBaseUrlProperty": false,
+      "dateTimeType": "System.DateTimeOffset",
+      "newLineBehavior": "LF",
+      "output": "csharp/Generated/SmartHouseClient.cs"
+    },
+    "openApiToTypeScriptClient": {
+      "className": "SmartHouseClient",
+      "operationGenerationMode": "SingleClientFromOperationId",
+      "template": "Fetch",
+      "typeStyle": "Interface",
+      "dateTimeType": "String",
+      "nullValue": "Null",
+      "generateOptionalParameters": true,
+      "useAbortSignal": true,
+      "newLineBehavior": "LF",
+      "output": "typescript/src/client.ts"
+    }
+  }
+}

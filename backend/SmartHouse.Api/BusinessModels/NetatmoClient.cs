@@ -9,25 +9,39 @@ namespace SmartHouse.Api.BusinessModels;
 public sealed class NetatmoClient(HttpClient http, SessionStore store, IConfiguration config,
     TimeProvider clock, ILogger<NetatmoClient> logger) : INetatmoClient
 {
+    /// <summary>Retrieves provider data, refreshing tokens once when required and surfacing provider failures.</summary>
     public async Task<JsonElement> Get(string sessionId, string endpoint, Dictionary<string, string?>? query, CancellationToken ct)
     {
         try
         {
+
             return await store.Locked("tokens:" + sessionId, async () =>
             {
                 var session = store.Find(sessionId) ?? throw new ProviderException("session_expired", 401);
-                if (session.Demo) return DemoData.Get(endpoint, query, clock.GetUtcNow());
+                if (session.Demo)
+                {
+
+                    return DemoData.Get(endpoint, query, clock.GetUtcNow());
+                }
+
                 if (session.Tokens.ExpiresAt <= clock.GetUtcNow().AddMinutes(1))
+                {
                     session = await Refresh(sessionId, session, ct);
+                }
 
                 using var response = await Send(session.Tokens.AccessToken, endpoint, query, ct);
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     session = await Refresh(sessionId, session, ct);
                     using var retry = await Send(session.Tokens.AccessToken, endpoint, query, ct);
-                    if (retry.StatusCode == HttpStatusCode.Unauthorized) store.Delete(sessionId);
+                    if (retry.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        store.Delete(sessionId);
+                    }
+
                     return await Parse(retry, ct);
                 }
+
                 return await Parse(response, ct);
             });
         }
@@ -44,6 +58,7 @@ public sealed class NetatmoClient(HttpClient http, SessionStore store, IConfigur
         var uri = QueryHelpers.AddQueryString("https://api.netatmo.com/api/" + endpoint, query ?? []);
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
         return await http.SendAsync(request, ct);
     }
 
@@ -65,8 +80,12 @@ public sealed class NetatmoClient(HttpClient http, SessionStore store, IConfigur
         var token = payload.Text("access_token") ?? throw new ProviderException("invalid_provider_response");
         var refresh = payload.Text("refresh_token") ?? throw new ProviderException("invalid_provider_response");
         var expires = payload.Number("expires_in") ?? throw new ProviderException("invalid_provider_response");
-        var updated = session with { Tokens = new(token, refresh, clock.GetUtcNow().AddSeconds(expires)) };
+        var updated = session with
+        {
+            Tokens = new(token, refresh, clock.GetUtcNow().AddSeconds(expires))
+        };
         store.Save(id, updated);
+
         return updated;
     }
 
@@ -91,7 +110,11 @@ public sealed class NetatmoClient(HttpClient http, SessionStore store, IConfigur
             throw new ProviderException("provider_unavailable");
         }
         var body = bodyOnly ? root.Field("body") : root;
-        if (body.ValueKind == JsonValueKind.Undefined) throw new ProviderException("invalid_provider_response");
+        if (body.ValueKind == JsonValueKind.Undefined)
+        {
+            throw new ProviderException("invalid_provider_response");
+        }
+
         return body.Clone();
     }
 }

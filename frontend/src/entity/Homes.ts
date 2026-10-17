@@ -1,3 +1,1 @@
-import type { Home } from './Home';
-
-export interface Homes { homes: Home[]; warnings: string[]; accountName?: string | null }
+export type { HomesResponse as Homes } from '../api/generated';

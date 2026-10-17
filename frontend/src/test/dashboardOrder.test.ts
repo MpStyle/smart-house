@@ -24,8 +24,8 @@ describe('dashboard ordering', () => {
     const rooms: Room[] = [
       { id: 'first', name: 'First', measurements: [] },
       { id: 'second', name: 'Second', measurements: [
-        { id: 'a', kind: 'temperature', deviceName: 'Device', value: 1, unit: 'C', measuredAt: null, hasHistory: false, updateFailed: false, status: 'unavailable' },
-        { id: 'b', kind: 'humidity', deviceName: 'Device', value: 2, unit: '%', measuredAt: null, hasHistory: false, updateFailed: false, status: 'unavailable' },
+        { id: 'a', kind: 'temperature', deviceName: 'Device', value: 1, unit: 'C', measuredAt: null, hasHistory: false, updateFailed: false, status: 'unavailable', sampleMinutes: null },
+        { id: 'b', kind: 'humidity', deviceName: 'Device', value: 2, unit: '%', measuredAt: null, hasHistory: false, updateFailed: false, status: 'unavailable', sampleMinutes: null },
       ] },
     ];
     const sorted = orderRooms(rooms, { roomIds: ['second', 'first'], measurementIds: { second: ['b', 'a'], first: ['a'] } });

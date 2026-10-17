@@ -63,8 +63,8 @@ jobs:
           az rest --method post --url "https://management.azure.com${APP_ID}/config/configreferences/appsettings/refresh?api-version=2022-03-01" --output none
           az webapp deploy --resource-group "$RESOURCE_GROUP" --name "$API_NAME" \
             --src-path package/api.zip --type zip --output none
-          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/api/health"
-          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/api/auth/session" \
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/api/v1/health"
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 15 "$PUBLIC_URL/api/v1/auth/session" \
             | jq -e '.authAvailable == true and .demoAvailable == false' > /dev/null
-          printf 'Backend: %s/api/health\nNetatmo callback: %s/api/auth/callback\nCommit: %s\n' \
+          printf 'Backend: %s/api/v1/health\nNetatmo callback: %s/api/v1/auth/callback\nCommit: %s\n' \
             "$PUBLIC_URL" "$PUBLIC_URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

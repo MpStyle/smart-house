@@ -1,40 +1,40 @@
-# Infrastruttura Azure
+# Azure infrastructure
 
-[`main.bicep`](main.bicep) e [`main.bicepparam`](main.bicepparam) definiscono Storage frontend, App Service Linux B1/.NET 10, Front Door Standard, Storage privato per Data Protection, Key Vault e RBAC del backend. Regione predefinita: **West Europe**.
+[`main.bicep`](main.bicep) and [`main.bicepparam`](main.bicepparam) define frontend Storage, Linux B1/.NET 10 App Service, Front Door Standard, private Data Protection Storage, Key Vault, and backend RBAC. Default region: **West Europe**.
 
-Il deploy infrastruttura **non** pubblica frontend o backend e non inserisce credenziali Netatmo.
+Infrastructure deployment **does not** publish frontend/backend code or enter Netatmo credentials.
 
-## CI infrastruttura
+## Infrastructure CI
 
-[`ci-infrastructure.yml`](../.github/workflows/ci-infrastructure.yml) si attiva solo per cambiamenti a `infra/`, ai propri workflow o all'implementazione condivisa delle pipeline; i soli README sono esclusi. Compila Bicep e parametri senza Azure login né creazione di risorse.
+[`ci-infrastructure.yml`](../.github/workflows/ci-infrastructure.yml) runs for `infra/` changes, its workflows, or shared pipeline implementation; README-only changes are excluded. It compiles Bicep and parameters without Azure login or resource creation.
 
 ```bash
 az bicep build --file infra/main.bicep --outfile /tmp/smart-house-template.json
 az bicep build-params --file infra/main.bicepparam --outfile /tmp/smart-house-parameters.json
 ```
 
-## Configurazione del deploy
+## Deployment configuration
 
-[`deploy-infrastructure.yml`](../.github/workflows/deploy-infrastructure.yml) usa i parametri compilati dal file `.bicepparam`. Le variabili GitHub opzionali sovrascrivono i relativi parametri:
+[`deploy-infrastructure.yml`](../.github/workflows/deploy-infrastructure.yml) uses compiled `.bicepparam` parameters. Optional GitHub variables override their corresponding parameters:
 
-| Nome | Posizione | Default / uso |
+| Name | Location | Default / purpose |
 | --- | --- | --- |
-| `AZURE_DEPLOY_ENABLED` | **Repository** → Actions variables | Assente/`false` durante bootstrap, `true` per deploy automatici successivi |
-| `AZURE_RESOURCE_GROUP` | Environment `production` → Variables | Obbligatoria: gruppo esistente e dedicato |
-| `AZURE_DEPLOYMENT_NAME` | Environment `production` → Variables | `smart-house`; identifica il deployment e i suoi output |
-| `AZURE_APP_NAME` | Environment `production` → Variables | `appName` da `.bicepparam`, inizialmente `smart-house` |
-| `AZURE_BUDGET_EMAILS` | Environment `production` → Variables | `budgetEmails` da `.bicepparam`, inizialmente `[]`; array JSON |
-| `AZURE_MONTHLY_BUDGET` | Environment `production` → Variables | `monthlyBudget` da `.bicepparam`, inizialmente `100`, valuta della sottoscrizione |
-| `AZURE_BUDGET_START` | Environment `production` → Variables | Se si abilitano avvisi, data stabile `YYYY-MM-01`; alternativa: parametro `budgetStart` nel file |
-| `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` | Environment `production` → Secrets | ID dell'identità federata, tenant e sottoscrizione |
+| `AZURE_DEPLOY_ENABLED` | **Repository** → Actions variables | Missing/`false` during bootstrap; `true` for subsequent automatic deployments |
+| `AZURE_RESOURCE_GROUP` | `production` environment → Variables | Required: existing dedicated resource group |
+| `AZURE_DEPLOYMENT_NAME` | `production` environment → Variables | `smart-house`; identifies the deployment and its outputs |
+| `AZURE_APP_NAME` | `production` environment → Variables | `appName` from `.bicepparam`, initially `smart-house` |
+| `AZURE_BUDGET_EMAILS` | `production` environment → Variables | `budgetEmails` from `.bicepparam`, initially `[]`; JSON array |
+| `AZURE_MONTHLY_BUDGET` | `production` environment → Variables | `monthlyBudget` from `.bicepparam`, initially `100`, in subscription currency |
+| `AZURE_BUDGET_START` | `production` environment → Variables | Stable `YYYY-MM-01` date when alerts are enabled; alternatively set `budgetStart` in the file |
+| `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` | `production` environment → Secrets | Federated identity, tenant, and subscription IDs |
 
-Non occorrono client secret Azure o publish profile. Configurare OIDC per `repo:<OWNER>/<REPOSITORY>:environment:production`, e ruoli di provisioning/assegnazione RBAC più `Storage Blob Data Contributor` per abilitare il sito statico. Passaggi completi: [README GitHub Actions](../.github/README.md).
+No Azure client secret or publish profile is required. Configure OIDC for `repo:<OWNER>/<REPOSITORY>:environment:production`, provisioning/RBAC assignment roles, and `Storage Blob Data Contributor` to enable the static website. Full steps: [GitHub Actions README](../.github/README.md).
 
-`Contributor` non autorizza l'assegnazione dei ruoli: aggiungere `Role Based Access Control Administrator` o `User Access Administrator` sul gruppo. Creare il gruppo prima di avviare il workflow per poter limitare i ruoli a quell'ambito.
+`Contributor` does not authorize role assignments: add `Role Based Access Control Administrator` or `User Access Administrator` on the group. Create the group before running the workflow so roles can be scoped to it.
 
-### Parametri
+### Parameters
 
-Per le impostazioni versionate modificare `main.bicepparam`. Un esempio con avvisi:
+Edit `main.bicepparam` for versioned settings. Example with alerts:
 
 ```bicep
 using './main.bicep'
@@ -46,42 +46,44 @@ param budgetEmails = ['owner@example.com']
 param budgetStart = '2026-10-01'
 ```
 
-Usare una data di inizio accettata da Azure nella propria sottoscrizione e conservarla nei successivi aggiornamenti. Le notifiche non spengono risorse né garantiscono il budget obiettivo 50–100 €/mese.
+Use a start date Azure accepts for your subscription and retain it in subsequent updates. Notifications do not stop resources or guarantee the EUR 50–100/month target.
 
-`frontendWebHost` è risolto dal workflow: non occorre configurarlo in GitHub. Al bootstrap viene eseguito un primo provisioning, si abilita static website e si completa l'origin Front Door con l'hostname effettivo. Nei deploy successivi il workflow recupera prima l'hostname esistente, evitando di rimuovere la route frontend durante il primo passaggio.
+The workflow resolves `frontendWebHost`; no GitHub variable is needed. Bootstrap provisions resources, enables the static website, then completes the Front Door origin with the actual hostname. Subsequent deployments retrieve the existing hostname first, avoiding removal of the frontend route during the first pass.
 
-## Bootstrap manuale
+## Manual bootstrap
 
-1. Pubblicare i workflow su `main` lasciando `AZURE_DEPLOY_ENABLED` assente/`false`.
-2. Creare il gruppo dedicato:
+1. Publish workflows to `main` with `AZURE_DEPLOY_ENABLED` missing/`false`.
+2. Create the dedicated resource group:
 
 ```bash
 az group create --name '<resource-group>' --location westeurope
 ```
 
-3. Configurare environment `production`, federazione OIDC, segreti Azure, variabili e ruoli. Attendere la propagazione RBAC.
-4. In GitHub **Actions → Deploy Infrastructure → Run workflow**, scegliere `main` e spuntare `confirm_costs`. Il provisioning può generare costi ricorrenti; non è una semplice validazione.
-5. Leggere nel riepilogo gli output:
+3. Configure `production`, OIDC federation, Azure secrets, variables, and roles. Allow RBAC propagation.
+4. In GitHub **Actions → Deploy Infrastructure → Run workflow**, choose `main` and select `confirm_costs`. Provisioning may incur recurring costs; it is not just validation.
+5. Read the summary outputs:
 
-| Output | Uso |
+| Output | Purpose |
 | --- | --- |
-| `frontendStorage` | Account del sito statico |
-| `apiName` | App Service backend |
-| `keyVaultName` | Vault in cui inserire i segreti Netatmo |
-| `frontDoorProfile`, `frontDoorEndpoint` | Front Door e invalidazione cache |
-| `publicUrl` | URL HTTPS dell'app |
-| `netatmoCallback` | Redirect URI esatto da registrare in Netatmo Connect |
+| `frontendStorage` | Static website account |
+| `apiName` | Backend App Service |
+| `keyVaultName` | Vault for Netatmo secrets |
+| `frontDoorProfile`, `frontDoorEndpoint` | Front Door and cache invalidation |
+| `publicUrl` | App HTTPS URL |
+| `netatmoCallback` | Exact redirect URI to register in Netatmo Connect |
 
-6. Inserire `netatmo-client-id` e `netatmo-client-secret` in Key Vault con un'identità operatore `Key Vault Secrets Officer`. Non inserirli nei YAML, in Bicep o in chat.
-7. Distribuire manualmente backend e frontend dai relativi workflow, dopo CI riuscita sullo stesso commit.
-8. Abilitare `AZURE_DEPLOY_ENABLED=true` a livello repository. Gli aggiornamenti infrastruttura su `main` saranno quindi automatici, senza approvazione, dopo CI riuscita.
+6. Enter `netatmo-client-id` and `netatmo-client-secret` in Key Vault using an operator identity with `Key Vault Secrets Officer`. Never put them in YAML, Bicep, or chat.
+7. Deploy backend and frontend manually through their workflows after successful CI for the same commit.
+8. Enable repository-level `AZURE_DEPLOY_ENABLED=true`. Future infrastructure updates on `main` deploy automatically after successful CI, without manual approval.
 
-Il bootstrap non verifica ancora la readiness dell'API: il codice non è stato pubblicato. Questa verifica appartiene al deploy backend, mentre il deploy frontend controlla il sito.
+Bootstrap does not yet check API readiness because code has not been deployed. Backend deployment performs that check; frontend deployment verifies the website.
 
-## Aggiornamenti e limiti
+## Updates and limits
 
-Un merge che modifica solo `infra/` esegue solo CI/deploy infrastruttura. Un merge che modifica anche backend/frontend mantiene l'ordine concordato e pubblica solo le sezioni cambiate. Per un aggiornamento runtime o di impostazioni che richiede una nuova pubblicazione del codice, includere anche la modifica applicativa o eseguire esplicitamente il relativo deploy manuale.
+A merge changing only `infra/` runs only infrastructure CI/deployment. A merge also changing backend/frontend follows the agreed order and publishes only changed sections. For runtime/settings updates requiring code republishing, include an application change or explicitly run its manual deployment.
 
-Non cambiare nomi, resource group o deployment name durante un aggiornamento ordinario: gli output sono il contratto usato dalle pipeline applicative. Mantenere una sola istanza backend e preservare volume sessioni, keyring Blob e chiavi Key Vault.
+Do not change resource names, resource group, or deployment name during ordinary updates: outputs are the contract used by application pipelines. Keep a single backend instance and preserve the session volume, Blob keyring, and Key Vault keys.
 
-Confermare il costo con Azure Pricing Calculator prima del bootstrap. La compilazione locale/CI del template non dimostra che la propria sottoscrizione abbia quote, permessi, SKU o runtime disponibili.
+The Front Door health probe uses `/api/v1/health`; the callback output uses `/api/v1/auth/callback`. When upgrading an existing installation, deploy the matching infrastructure, backend, and frontend changes together and update the Netatmo app registration. Unversioned API URLs are not supported.
+
+Confirm pricing with Azure Pricing Calculator before bootstrap. Local/CI template compilation does not establish subscription quotas, permissions, SKU availability, or runtime availability.

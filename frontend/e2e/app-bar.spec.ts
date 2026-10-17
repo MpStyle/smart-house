@@ -18,13 +18,13 @@ async function expectRightAlignment(page: Page, account: Locator, refresh?: Loca
 
 test('account stays at the right edge with actions immediately to its left, including narrow screens and long names', async ({ page }) => {
   let accountName = 'Person';
-  await page.route('**/api/auth/session', route => route.fulfill({ json: {
+  await page.route('**/api/v1/auth/session', route => route.fulfill({ json: {
     authenticated: true, csrfToken: 'layout-test', authAvailable: true, demoAvailable: false, demo: false, expiresAt: null,
   } }));
-  await page.route('**/api/homes/', route => route.fulfill({ json: {
+  await page.route('**/api/v1/homes', route => route.fulfill({ json: {
     homes: [{ id: 'layout-home', name: 'Home', timezone: 'UTC' }], warnings: [], accountName,
   } }));
-  await page.route('**/api/homes/layout-home/measurements', route => route.fulfill({ json: {
+  await page.route('**/api/v1/homes/layout-home/measurements', route => route.fulfill({ json: {
     homeId: 'layout-home', timezone: 'UTC', fetchedAt: new Date().toISOString(), rooms: [], warnings: [],
   } }));
   await page.goto('/');

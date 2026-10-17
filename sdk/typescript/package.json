@@ -1,0 +1,31 @@
+{
+  "name": "@mpstyle/smart-house-sdk",
+  "version": "0.1.0",
+  "description": "Generated Fetch SDK for the Smart House API.",
+  "type": "module",
+  "main": "./dist/client.js",
+  "types": "./dist/client.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MpStyle/smart-house.git",
+    "directory": "sdk/typescript"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  }
+}

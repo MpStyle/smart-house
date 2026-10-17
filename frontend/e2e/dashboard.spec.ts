@@ -72,7 +72,7 @@ test('login, rooms, device provenance, charts, languages and logout', async ({ p
   await page.getByRole('menuitem', { name: 'Esci', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Esplora la demo' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Soggiorno' })).toHaveCount(0);
-  expect((await page.request.get('/api/homes/')).status()).toBe(401);
+  expect((await page.request.get('/api/v1/homes')).status()).toBe(401);
   expect(errors).toEqual([]);
 });
 
@@ -85,7 +85,7 @@ test('values become stale then unavailable on an open page without polling and l
     .filter({ hasText: 'Soggiorno / Soggiorno' }).filter({ hasText: '21.7' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Soggiorno' }).getByText('Unavailable', { exact: true })).toHaveCount(0);
   let requests = 0;
-  page.on('request', request => { if (request.url().includes('/api/homes')) requests++; });
+  page.on('request', request => { if (request.url().includes('/api/v1/homes')) requests++; });
   await page.clock.fastForward(31 * 60_000);
   await expect(page.getByRole('region', { name: 'Soggiorno' }).getByText('Stale data', { exact: true })).toHaveCount(9);
   await expect(page.getByRole('region', { name: 'Soggiorno' }).getByRole('link').filter({ hasText: '21.7' })).toBeVisible();
@@ -172,7 +172,7 @@ test('two-column compact cards apply below exactly 600px without horizontal over
 test('API logging matches the build mode and never exposes session credentials', async ({ page }) => {
   const logs: string[] = [];
   page.on('console', message => { if (message.type() === 'log') logs.push(message.text()); });
-  const sessionResponse = page.waitForResponse(response => response.url().endsWith('/api/auth/session'));
+  const sessionResponse = page.waitForResponse(response => response.url().endsWith('/api/v1/auth/session'));
   await page.goto('/');
   const session = await (await sessionResponse).json();
   await expect(page.getByRole('button', { name: 'Explore the demo' })).toBeVisible();

@@ -25,7 +25,7 @@ export default function Login({ session, reload }: LoginProps) {
       {new URLSearchParams(window.location.search).has('authError') && <Alert severity="error">{t('authError')}</Alert>}
       {!session.authAvailable && <Alert severity="info">{t('configuration')}</Alert>}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignSelf: 'flex-start' }}>
-        <Button variant="contained" size="large" href="/api/auth/login" disabled={!session.authAvailable} endIcon={<ArrowForward />}>{t('login')}</Button>
+        <Button variant="contained" size="large" href="/api/v1/auth/login" disabled={!session.authAvailable} endIcon={<ArrowForward />}>{t('login')}</Button>
         {session.demoAvailable && <Button variant="outlined" size="large" disabled={demoState.isLoading} onClick={async () => {
           try { await demo(session.csrfToken).unwrap(); dispatch(preferences.actions.setExpired(false)); await reload(); }
           catch (error) { console.error('Demo sign-in failed.', error); }

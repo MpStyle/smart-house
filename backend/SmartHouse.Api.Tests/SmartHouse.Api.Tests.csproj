@@ -15,5 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../SmartHouse.Api/SmartHouse.Api.csproj" />
+    <ProjectReference Include="../../sdk/csharp/SmartHouse.Sdk.csproj" />
+    <None Include="../../openapi/smart-house.json" Link="openapi.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

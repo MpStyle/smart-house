@@ -1,1 +1,1 @@
-export type MeasurementStatus = 'fresh' | 'stale' | 'unavailable';
+export type { MeasurementStatus } from '../api/generated';

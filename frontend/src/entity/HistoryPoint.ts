@@ -1,1 +1,1 @@
-export interface HistoryPoint { time: string; value: number | null }
+export type { HistoryPoint } from '../api/generated';
