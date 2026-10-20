@@ -1,6 +1,6 @@
 ---
 name: mp-smart-home-workflow
-description: "Explicit-only local TODO workflow: clarify each entry with grill-me, record English GIVEN / WHEN / THEN scenarios, implement, test, commit and fast-forward merge locally without GitHub or remote operations."
+description: "Explicit-only local TODO workflow: clarify each entry with grill-me or grilling, record English GIVEN / WHEN / THEN scenarios, implement, test, commit and fast-forward merge locally without GitHub or remote operations."
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -16,7 +16,7 @@ If loaded without an explicit invocation, stop without side effects.
 
 An explicit invocation authorizes local branch creation, implementation,
 commits and conditional local fast-forward merges for the selected TODO entries.
-It also authorizes invoking `grill-me` for each entry. Respect host permissions
+It also authorizes invoking `grill-me` or `grilling` for each entry. Respect host permissions
 and higher-priority instructions.
 
 Operate entirely locally: use the checkout, local Git history and local tools.
@@ -50,7 +50,7 @@ Report an invocation failure rather than enabling implicit invocation.
    Keep this base fixed throughout the invocation; do not resolve a remote
    default branch or synchronize with origin. Read local test configuration
    and documented verification commands.
-5. Verify that `grill-me` and its dependency `grilling` are available. They
+5. Verify that `grill-me` or `grilling` are available. They
    may be personal skills; they are not bundled here. If missing, stop and
    request their installation. Do not replace the interview with guesses.
 6. Record the initial unchecked entries by heading, original task title and
@@ -81,7 +81,7 @@ before taking action. On any blocker, stop the sequence and preserve progress.
 
 ### 2. Interview and record acceptance criteria
 
-- Invoke `grill-me` explicitly on behalf of this authorized workflow, passing
+- Invoke `grill-me` or `grilling` or  explicitly on behalf of this authorized workflow, passing
   the TODO context and relevant local repository facts. Keep it local-only.
 - Interview for this entry even if an earlier entry was already clarified.
   Wait for the user's explicit confirmation of the agreed requirements before
