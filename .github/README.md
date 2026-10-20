@@ -9,27 +9,35 @@ Explicitly invoke `/mp-smart-home-workflow` to process unchecked entries in root
 Creating or discussing the skill does not run it. With no open entries it does
 nothing.
 
-Each entry gets an English GIVEN / WHEN / THEN issue, an
-`issue-<number>-<english-slug>` branch and a mandatory `grill-me` interview with
-your confirmation before implementation. Install the personal `grill-me` and
-`grilling` skills first; they are not bundled with this project.
+The workflow is entirely local: it does not access GitHub or perform remote
+Git operations (including fetch, pull or push). It starts from a clean checkout
+and uses the initial local branch as its fixed integration base, without
+consulting or synchronizing origin. Existing GitHub links remain inert text.
 
-The invocation authorizes sequential implementation, commits referencing the
-issue, push to origin, PR creation and automatic merge only after successful
-local verification and GitHub checks, with repository protections respected.
-Unit tests must pass before every commit and push. Missing test infrastructure
-or non-applicable tests require your explicit decision; missing GitHub checks
-block automatic merge. Failures stop the sequence. The PR includes the TODO
-checkbox update and issue link, and closes the issue on merge. Existing linked
-work is reused; a dirty or diverged checkout is never cleaned automatically.
+Each entry gets a short descriptive English branch name, such as
+`add-room-renaming`, without numbers or generated IDs, and a mandatory
+`grill-me` interview with your confirmation before implementation. Agreed
+English GIVEN / WHEN / THEN scenarios are recorded under the entry in TODO.md.
+Install the personal `grill-me` and `grilling` skills first; they are not bundled
+with this project.
+
+The invocation authorizes sequential implementation, local commits and
+automatic local fast-forward merges into the initial branch. Unit tests must
+pass before every commit, along with applicable local verification. Missing
+test infrastructure or non-applicable tests require your explicit decision.
+Commits use English messages with `TODO: <task title>` references; the completed
+implementation and checked TODO entry are committed together. After verification,
+the workflow integrates the exact tested commit only if the base is unchanged.
+Failures or ambiguity stop the sequence without discarding work. Existing local
+work is matched by title, context and branch; branches are retained after merge.
 
 Reload project skills in Copilot CLI with `/skills reload`, then invoke
 `/mp-smart-home-workflow`. Explicit-only metadata is enabled; some Copilot
 CLI/app versions have a known [manual invocation compatibility issue](https://github.com/github/copilot-cli/issues/4438).
 If affected, use a compatible host/version rather than removing the
 explicit-only restriction. This is an agent instruction workflow, not an
-unattended GitHub Actions job; it requires an interactive host, GitHub
-permissions and available tools.
+unattended GitHub Actions job; it requires an interactive host, local Git and
+available local verification tools, not GitHub credentials.
 
 ## Workflows and triggers
 
